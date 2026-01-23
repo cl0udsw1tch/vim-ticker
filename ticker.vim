@@ -7,7 +7,8 @@ let s:ticker_tape = "EMPTY"
 let s:ticker_rotate_handle = -1
 let s:ticker_head_offset = 0
 let s:ticker_head = 0
-let s:tape_len = 25
+let s:tape_len = 50
+let s:rotate_hz = 5
 let s:max_tickers = 10
 let s:job_handle = v:null
 
@@ -20,6 +21,10 @@ let s:HL_POS = "%#HL_POS#"
 let s:HL_NEG = "%#HL_NEG#"
 let s:HL_NTL = s:HL_SYM
 let s:HL_Map = {-1: s:HL_NEG, 0: s:HL_NTL, 1: s:HL_POS}
+"let s:change_sym_map = {-1: '-', 0: '+' , 1: '+'}
+let s:change_sym_map =  {-1: "\u25BC", 0: "\u25B2" , 1: "\u25B2"}
+
+
 
 " =============================================================== " 
 function GetSubProcessCode()
@@ -51,7 +56,7 @@ function ExecuteSubProcess()
 endfunction
 
 function s:HandleResponse(ch,msg)
-    let arr = split(a:msg, " ")
+    let arr = split(substitute(trim(a:msg),"\%x00", "", "g"), " ")
     let name = arr[0]
     let price = str2float(arr[1])
     let delta = str2float(arr[2])
@@ -110,8 +115,8 @@ function FormatPrice(raw_float)
 endfunction
 
 function FormatDelta(raw_float)
-    let formatted_delta = printf("%.2f", a:raw_float*100)
-    return formatted_delta
+    let fdelta = printf("%.2f", abs(a:raw_float)*100) . "\uFE6A"
+    return fdelta
 endfunction
 
 
@@ -124,25 +129,33 @@ function RotateTickerTape(timerId)
     let ticker0 = s:tickers[ticker_idx]
     let name_token0 = ticker0 . " "
     let price_token0 = s:prices[ticker0]['price'] . " "
+    let change0 = s:prices[ticker0]['change']
+    let delta_token0 = "(" . s:change_sym_map[change0] .  s:prices[ticker0]['delta'] . ") "
     let m_name0 = strchars(name_token0)
     let m_price0 = strchars(price_token0)
-    let hl_tag0 = s:HL_Map[s:prices[ticker0]['change']]
+    let m_delta0 = strchars(delta_token0)
+    let hl_tag0 = s:HL_Map[change0]
     if j<m_name0
         let s:ticker_tape .= s:HL_Map[0]
     elseif j>=m_name0
         let s:ticker_tape .= hl_tag0
     endif
-    let j=(j+1)%(m_name0+m_price0)
-    if j==0
-        let ticker_idx=(ticker_idx+1)%s:n_tickers
+    "let j=(j+1)%(m_name0+m_price0+m_delta0)
+    if j0==0
+        let j+=1
+    elseif j0==m_name0
+        let j+=1
     endif
     while char_count<s:tape_len
         let ticker = s:tickers[ticker_idx]
         let name_token = ticker . " "
-        let price_token = s:prices[ticker]['price'] . " "
+        let price_token = s:prices[ticker]['price'] . " "   
+        let change=s:prices[ticker]['change']
+        let delta_token = "(" . s:change_sym_map[change] . s:prices[ticker]['delta'] . ") "
         let m_name = strchars(name_token)
         let m_price = strchars(price_token)
-        let hl_tag = s:HL_Map[s:prices[ticker]['change']]
+        let m_delta = strchars(delta_token)
+        let hl_tag = s:HL_Map[change]
 
         if j==0
             let s:ticker_tape .= s:HL_Map[0] . name_token[0]
@@ -151,15 +164,15 @@ function RotateTickerTape(timerId)
         elseif j==m_name
             let s:ticker_tape .= hl_tag . price_token[0]
         elseif j>m_name
-            let s:ticker_tape .= price_token[j-m_name]
+            let s:ticker_tape .= strcharpart(price_token . delta_token, j-m_name, 1)
         endif
         let char_count += 1
-        let j = (j+1)%(m_name+m_price)
+        let j = (j+1)%(m_name+m_price+m_delta)
         if j==0
             let ticker_idx = (ticker_idx+1)%s:n_tickers
         endif
     endwhile
-    let s:ticker_head_offset=(j0+1)%(m_name0+m_price0)
+    let s:ticker_head_offset=(j0+1)%(m_name0+m_price0+m_delta0)
     if s:ticker_head_offset==0
         let s:ticker_head=(s:ticker_head+1)%s:n_tickers
     endif
@@ -189,7 +202,7 @@ function Ticker(...)
     :call ClearTicker()
     :call SetTickers(a:000)
     :call UpdateTickers()
-    let s:ticker_rotate_handle = timer_start(250, "RotateTickerTape", {'repeat': -1}) 
+    let s:ticker_rotate_handle = timer_start(1000/s:rotate_hz, "RotateTickerTape", {'repeat': -1}) 
 endfunction
 
  
