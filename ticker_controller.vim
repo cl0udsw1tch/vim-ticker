@@ -14,26 +14,26 @@ let s:api = {}
 
 " ---------------------- MODEL LIFECYCLE -------------------------
 
-function CreateModel()
+function s:CreateModel()
     :doautocmd User Ticker#CreateModel
     let s:model_handle = bufnr(s:model_name)
     let s:model = getbufvar(s:model_handle, "model")
 endfunction
 
-function DestroyModel()
+function s:DestroyModel()
     :doautocmd User Ticker#DestroyModel
     let s:model_handle = -1
     let s:model = {}
 endfunction
 
-function ClearModel()
+function s:ClearModel()
     :call s:model.ClearModel()
 endfunction
 
 
 " --------------------- CONTROLLER LIFECYCLE ---------------------
 
-function CreateInterface()
+function s:CreateInterface()
     let s:interface_handle = bufadd(s:interface_name)
     :call setbufvar(s:interface_handle, "&buflisted", 0)
     :call setbufvar(s:interface_handle, "&buftype", "nofile")
@@ -44,7 +44,7 @@ function CreateInterface()
     :doautocmd User Ticker#ControllerReady 
 endfunction
 
-function DestroyInterface()
+function s:DestroyInterface()
     if s:interface_handle != -1
         execute "bwipeout" s:interface_handle  
         let s:interface_handle = -1
@@ -56,19 +56,19 @@ endfunction
 " ----------------------- INTERFACE --------------------------
 
 function s:CreateTape()
-    :call s.api.TapeController.CreateTape() 
+    :call s:api.TapeController.CreateTape() 
 endfunction
 
 function s:DestroyTape()
-    :call s.api.TapeController.DestroyTape()
+    :call s:api.TapeController.DestroyTape()
 endfunction
 
 function s:CreateChart()
-    :call s.api.ChartController.CreateChart()
+    :call s:api.ChartController.CreateChart()
 endfunction
 
 function s:DestroyChart()
-    :call s.api.ChartController.DestroyChart()
+    :call s:api.ChartController.DestroyChart()
 endfunction
 
 function s:CreateTicker(...)

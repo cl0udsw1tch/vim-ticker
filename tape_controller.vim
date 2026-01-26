@@ -31,7 +31,7 @@ let s:model = {}
 
 augroup Ticker#TapeController
 autocmd!
-autocmd User Ticker#ControllerReady :call CreateTapeController()
+autocmd User Ticker#ControllerReady :call s:CreateTapeController()
 augroup END
 
 "--------------------------- INTERFACE --------------------------------
@@ -59,7 +59,7 @@ function s:DestroyTape()
         let s:ticker_head_offset=0
         let s:ticker_head=0
     endif
-    :call s.api.TapeView.ResetTape()
+    :call s:api.TapeView.ResetTape()
 endfunction
 
 " -------------------------- PROCEDURES ---------------------------- " 
@@ -75,7 +75,7 @@ function s:RotateTape()
 
     let close = s:model.price_data[ticker0].prev_close
     let price = s:model.GetLastPrice(ticker0)
-    let delta = (price - close) / close
+    let delta = close != -1 ? (price - close) / close : 0
     let change = delta > 0 ? 1 : delta < 0 ? -1 : 0
     
     let price_token = s:FormatPrice(price) . " "
@@ -99,7 +99,7 @@ function s:RotateTape()
         
         let close = s:model.price_data[ticker].prev_close
         let price = s:model.GetLastPrice(ticker)
-        let delta = close != 0 ? (price - close) / close : 0
+        let delta = close != -1 ? (price - close) / close : 0
         let change = delta > 0 ? 1 : delta < 0 ? -1 : 0
     
         let name_token = ticker . " "
