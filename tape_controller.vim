@@ -47,16 +47,11 @@ function s:CreateTapeController()
         \}
     let s:model_handle = bufnr(s:model_name)
     let s:model = getbufvar(s:model_handle, "model")
-    echo "model"
-    echo s:model
     let s:GetLastPrice = getbufvar(s:model_handle, "GetLastPrice")
     :doautocmd User Ticker#TapeControllerReady
 endfunction
 
 function s:CreateTape()
-    echo "creating tape"
-    echo s:model
-    echo s:api
     let s:rotate_handle = timer_start(1000/s:rotate_hz, funcref("<SID>RotateTape"), {'repeat':-1})
 endfunction
 

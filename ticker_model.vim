@@ -65,7 +65,7 @@ function s:SetTickers(tickers)
     let s:model.tickers = a:tickers
     let s:model.n_tickers = len(a:tickers) 
     for ticker in a:tickers
-        let s:model.price_data[ticker] = {"prev_close": -1, "prices": s:CircBuf()}
+        let s:model.price_data[ticker] = {"prev_close": -1, "prices": s:Stream(), "last": s:StreamItem()}
     endfor 
 endfunction
 
@@ -114,7 +114,12 @@ function s:HandleError(ch, msg)
     echo "Ticker error: " . a:msg
 endfunction
 
-function s:CircBuf()
+
+" ------------------------------- STREAM -------------------------------
+
+let s:stream_item_map = {"MINUTE": 0, "OPEN": 1, "CLOSE":2, "HIGH": 3, "LOW": 4}
+
+function s:Stream()
     let r = {
                 \"idx": 0,
                 \"head":0,
@@ -125,25 +130,97 @@ function s:CircBuf()
     return r
 endfunction
 
-function s:GetLastPrice(ticker)
-    let prices = s:model.price_data[a:ticker].prices
-    if prices.size == 0
+function s:LastIdx(stream)
+    if a:stream.size == 0
         return -1
     endif
-    let last_idx = (prices.idx -1 + prices.capacity ) % prices.capacity
-    let last_price = prices.buf[last_idx]
-    return last_price
+    let last_idx = (a:stream.idx -1 + a:stream.capacity ) % a:stream.capacity
+    return last_idx
+endfunction
+
+function s:Tail(stream)
+    if a:stream.size == 0
+        return v:null
+    endif
+    return a:stream.buf[s:LastIdx(a:stream)]
+endfunction
+
+function s:NextIdx(stream)
+    return a:stream.idx
+endfunction
+
+function s:Add(stream, stream_item)
+    if a:stream.size == a:stream.capacity
+        let a:stream.head = (a:stream.head + 1) % a:stream.capacity
+    else
+        let a:stream.size += 1
+    endif
+
+    let a:stream.buf[s:NextIdx(a:stream)] = a:stream_item
+    let a:stream.idx = (a:stream.idx + 1) % a:stream.capacity 
+endfunction
+
+function s:GetStreamItemVal(stream_item, key)
+    return a:stream_item[s:stream_item_map[a:key]]
+endfunction
+
+function s:SetStreamItemVal(stream_item, key, val)
+    let a:stream_item[s:stream_item_map[a:key]] = a:val
+endfunction
+
+
+
+" ------------------------- INTERFACE ----------------------------
+
+function s:StreamItem()
+    return [-1, -1, -1, -1, -1]
+endfunction
+
+function s:GetLast(ticker)
+    return s:model.price_data[a:ticker].last
+endfunction
+
+function s:SetLast(ticker, stream_item)
+    let s:model.price_data[a:ticker].last = a:stream_item
+endfunction
+
+function s:GetLastVal(ticker, key)
+    return s:GetStreamItemVal(s:GetLast(a:ticker),  a:key)
+endfunction
+
+function s:SetLastVal(ticker, key, val)
+    :call s:SetStreamItemVal(s:model.price_data[a:ticker].last, a:key, a:val)
+endfunction
+
+function s:GetLastPrice(ticker)
+    return s:GetLastVal(a:ticker, "CLOSE")
 endfunction
 
 function s:AddPrice(ticker, price)
-    let prices = s:model.price_data[a:ticker].prices
-    if prices.size == prices.capacity
-        let prices.head = (prices.head + 1) % prices.capacity
+    let stream = s:model.price_data[a:ticker].prices
+    let minute = (localtime() / 60) * 60
+    let last_minute = s:GetLastVal(a:ticker, "MINUTE")
+   
+    if last_minute == minute
+        let prev_high = s:GetLastVal(a:ticker, "HIGH")
+        let prev_low = s:GetLastVal(a:ticker, "LOW")
+        let high = max([prev_high, a:price])
+        let low = min([prev_low, a:price])
+        let close = a:price
+        :call s:SetLastVal(a:ticker, "CLOSE", close)
+        :call s:SetLastVal(a:ticker, "LOW", low)
+        :call s:SetLastVal(a:ticker, "HIGH", high)
     else
-        let prices.size += 1
+        let new_stream_item = s:StreamItem()
+        :call s:SetStreamItemVal(new_stream_item, "OPEN", a:price)
+        :call s:SetStreamItemVal(new_stream_item, "CLOSE", a:price)
+        :call s:SetStreamItemVal(new_stream_item, "HIGH", a:price)
+        :call s:SetStreamItemVal(new_stream_item, "LOW", a:price)
+        :call s:SetStreamItemVal(new_stream_item, "MINUTE", minute)
+
+        :call s:Add(stream, s:GetLast(a:ticker))
+        :call s:SetLast(a:ticker, new_stream_item)
     endif
-    let prices.buf[prices.idx] = a:price
-    let prices.idx = (prices.idx + 1) % prices.capacity 
 endfunction
 
 
