@@ -19,12 +19,12 @@ augroup END
 
 " -------------------------- LIFECYCLE -----------------------------------
 
-function s:CreateModel(tickers)
+function s:CreateModel()
     if s:model_handle == -1
         let s:model_handle = bufadd("__ticker_model__")
         :call setbufvar(s:model_handle, "&buftype", "nofile")
         :call setbufvar(s:model_handle, "&bufhidden", "hide")
-        :call setbufvar(s:model_handle, "&nobuflisted")
+        :call setbufvar(s:model_handle, "&buflisted", 0)
         :call bufload(s:model_handle)   
         :call setbufvar(s:model_handle, "StartModel", funcref("<SID>StartModel"))
         :call setbufvar(s:model_handle, "ClearModel", funcref("<SID>ClearModel"))
@@ -41,7 +41,7 @@ function s:StartModel(tickers)
 endfunction 
 
 function s:ClearModel()
-    :call StopJob()
+    :call s:StopJob()
     let s:model = {
                 \"n_tickers": 0,
                 \"n_bars": s:n_bars,
@@ -70,12 +70,13 @@ function s:SetTickers(tickers)
 endfunction
 
 function s:GetPrevClose()
+    echo "Getting prev close..."
     let subprocess_str = s:PrevCloseSubProcessCode()
-    let cmd = ["python3", "-u", "-c", subprocess_str] + s:tickers
-    let res = system(cmd)
+    let cmd = ["python3", "-u", "-c", "'" . subprocess_str . "'"] + s:model.tickers
+    let res = system(join(cmd, " "))
     let close_arr = split(res, " ")
     let i = 0
-    for ticker in s:tickers
+    for ticker in s:model.tickers
         let s:model.price_data[ticker].prev_close = close_arr[i] == "-1" ? -1 : str2float(close_arr[i])
         let i+=1
     endfor
@@ -83,7 +84,7 @@ endfunction
 
 function s:GetPrices()
     let subprocess_str = s:PriceSubProcessCode()
-    let cmd = ["python3","-u", "-c", subprocess_str] +  s:tickers
+    let cmd = ["python3","-u", "-c", subprocess_str] +  s:model.tickers
     let s:job_handle = job_start(cmd, {
                 \'out_cb': function("<SID>HandleResponse"), 
                 \'err_cb': function("<SID>HandleError"), 
@@ -126,7 +127,7 @@ endfunction
 
 function s:GetLastPrice(ticker)
     let prices = s:model.price_data[a:ticker].prices
-    if prices.size == 0:
+    if prices.size == 0
         return -1
     endif
     let last_idx = (prices.idx -1 + prices.capacity ) % prices.capacity
@@ -141,7 +142,7 @@ function s:AddPrice(ticker, price)
     else
         let prices.size += 1
     endif
-    let prices.buf[idx] = price
+    let prices.buf[prices.idx] = a:price
     let prices.idx = (prices.idx + 1) % prices.capacity 
 endfunction
 
@@ -153,8 +154,8 @@ function s:PrevCloseSubProcessCode()
     let cmd .= "import sys, signal\n"
     let cmd .= "sig_handle=lambda sig,frame: sys.exit(0)\n"
     let cmd .= "signal.signal(signal.SIGTERM,sig_handle)\n"
+    let cmd .= "r=[]\n"
     let cmd .= "for name in sys.argv[1:]:\n"
-    let cmd .= "r=[]"
     let cmd .= "\ttry:\n"
     let cmd .= "\t\tticker=yf.Ticker(name)\n"
     let cmd .= "\t\tinfo=ticker.fast_info\n"
@@ -162,7 +163,7 @@ function s:PrevCloseSubProcessCode()
     let cmd .= "\t\tr.append(close)\n"
     let cmd .= "\texcept:\n"
     let cmd .= "\t\tr.append(-1)\n"
-    let cmd .= "print(r, flush=True)"
+    let cmd .= "print(\" \".join(map(str,r)), flush=True)\n"
     return cmd
 endfunction
 

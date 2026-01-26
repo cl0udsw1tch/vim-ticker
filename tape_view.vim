@@ -12,13 +12,13 @@ let s:base_statusline = ""
 
 augroup Ticker#TapeView
     autocmd!
-    autocmd User Ticker#TapeControllerReady :call CreateTapeView() 
+    autocmd User Ticker#TapeControllerReady :call s:CreateTapeView() 
 augroup END
 
 
 " ---------------------------- INTERFACE ----------------------------------
 
-function CreateTapeView()
+function s:CreateTapeView()
     let s:interface_handle = bufnr(s:interface_name)
     let s:api = getbufvar(s:interface_handle, "api")
     
@@ -32,8 +32,8 @@ function CreateTapeView()
 
 endfunction
 
-function s:UpdateTapeView()
-    let &statusline = s:base_statusline . "%=" . s:ticker_tape
+function s:UpdateTapeView(ticker_tape)
+    let &statusline = s:base_statusline . "%=" . a:ticker_tape
 endfunction
 
 function s:ResetTapeView()
