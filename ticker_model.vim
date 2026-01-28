@@ -28,9 +28,11 @@ function s:CreateModel()
         :call bufload(s:model_handle)   
         :call setbufvar(s:model_handle, "StartModel", funcref("<SID>StartModel"))
         :call setbufvar(s:model_handle, "ClearModel", funcref("<SID>ClearModel"))
+       
         :call setbufvar(s:model_handle, "GetLastPrice", funcref("<SID>GetLastPrice"))
-        
-    endif 
+        :call setbufvar(s:model_handle, "GetStreamItemVal", funcref("<SID>GetStreamItemVal")),           :call setbufvar(s:model_handle, "StreamIter", funcref("<SID>StreamIter"))
+        :call setbufvar(s:model_handle, "StreamIterIsValid", funcref("<SID>StreamIterIsValid"))
+    endif   
     :call s:ClearModel() 
 endfunction
 
@@ -134,7 +136,7 @@ function s:LastIdx(stream)
     if a:stream.size == 0
         return -1
     endif
-    let last_idx = (a:stream.idx -1 + a:stream.capacity ) % a:stream.capacity
+    let last_idx = s:StreamPrevIdx(a:stream, a:stream.idx)
     return last_idx
 endfunction
 
@@ -147,6 +149,13 @@ endfunction
 
 function s:NextIdx(stream)
     return a:stream.idx
+endfunction
+
+function s:StreamPrevIdx(stream, idx)
+    if idx == a:stream.head
+        return -1
+    endif
+    return (a:idx -1 + a:stream.capacity ) % a:stream.capacity
 endfunction
 
 function s:Add(stream, stream_item)
@@ -168,6 +177,22 @@ function s:SetStreamItemVal(stream_item, key, val)
     let a:stream_item[s:stream_item_map[a:key]] = a:val
 endfunction
 
+function s:StreamIterator(stream)
+    let idx = s:model.LastIdx(a:stream)
+    return {"idx": idx, "stream": a:stream}
+
+endfunction
+
+function s:StreamIterIsValid(stream_iter)
+    return a:stream_iter.idx != -1
+endfunction
+
+
+function s:StreamIterPrev(stream_iter)
+    let res = a:stream_iter.stream[a:stream_iter.idx]
+    a:stream_iter.idx = s:StreamPrevIdx(a:stream, a:stream_iter.idx)
+    return res
+endfunction
 
 
 " ------------------------- INTERFACE ----------------------------
