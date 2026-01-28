@@ -1,9 +1,6 @@
 
 " CHART CONTROLLER
 
-highlight! GREEN_BAR cterm=bold ctermbg=Black ctermfg=Green guibg=#000000 guifg=#00FF00
-highlight! RED_BAR cterm=bold ctermbg=Black ctermfg=Red guibg=#000000 guifg=#FF0000
-
 let s:ticker_idx = 0
 let s:chart_hz = 1/2
 let s:chart_handle = -1
@@ -14,6 +11,7 @@ let s:interface_name = "__ticker_controller__"
 let s:interface_handle = -1
 
 let s:model = {}
+let s:model_interface = {}
 let s:api = {}
 
 
@@ -33,20 +31,26 @@ function s:CreateChartController()
     let s:api = getbufvar(s:interface_handle, "api")
     let s:model_handle = bufnr(s:model_name)
     let s:model = getbufvar(s:model_handle, "model")
-
+    let s:model_interface = getbufvar(s:model_handle, "model_interface")
     let s:api.ChartController = {
         \"CreateChart":  funcref("<SID>CreateChart"),
         \"DestroyChart": funcref("<SID>DestroyChart"),
-        \"BarIterIsValid": s:model.StreamIterIsValid,
-        \"BarIterPrev": s:model.StreamIterPrev,
-        \"GetBarVal" : s:model.GetStreamItemVal,
+        \"BarIterIsValid": s:model_interface["StreamIterIsValid"],
+        \"BarIterPrev": s:model_interface["StreamIterPrev"],
+        \"BarIterReset": s:model_interface["StreamIterReset"],
+        \"GetBarVal": s:model_interface["GetStreamItemVal"],
         \"ChartTickers": s:model.tickers,
         \}
     :doautocmd User Ticker#ChartControllerReady
 endfunction
 
 function s:CreateChart()
-    let s:chart_handle = timer_start(1000/s:chart_hz, funcref("<SID>UpdateChart"))
+    :call s:ShowChart()
+    let s:chart_handle = timer_start(1000/s:chart_hz, funcref("<SID>UpdateChart"), {'repeat': -1})
+endfunction
+
+function s:ShowChart()
+    :call s:api.ChartView.ShowChart()
 endfunction
 
 function s:HideChart()
@@ -72,9 +76,15 @@ function s:DestroyChart()
 endfunction
 
 function s:UpdateChart(timerId)
-    let buf_iter = s:model.StreamIter(s:model.price_data[s:ticker].stream)
-    let last = s:model.price_data[s:ticker].last 
-    :call s:api.ChartView.UpdateChartView(s:ticker, buf_iter, last) 
+    echo "CONTROLLER UDPATING CHART"
+    let ticker = s:model.tickers[s:ticker_idx]
+    let buf_iter = s:model_interface["StreamIterator"](s:model.price_data[ticker].prices)
+    echo "buf iter"
+    echo buf_iter
+    echo "price_data"
+    echo s:model.price_data[ticker]
+    let last = s:model.price_data[ticker].last 
+    :call s:api.ChartView.UpdateChartView(ticker, buf_iter, last) 
 endfunction
 
 

@@ -25,8 +25,7 @@ let s:model_handle = -1
 
 let s:api = {}
 let s:model = {}
-
-let s:GetLastPrice = v:null
+let s:model_interface = {}
 
 " ------------------------- AUTOCOMMANDS ------------------------------
 
@@ -47,7 +46,7 @@ function s:CreateTapeController()
         \}
     let s:model_handle = bufnr(s:model_name)
     let s:model = getbufvar(s:model_handle, "model")
-    let s:GetLastPrice = getbufvar(s:model_handle, "GetLastPrice")
+    let s:model_interface = getbufvar(s:model_handle, "model_interface")
     :doautocmd User Ticker#TapeControllerReady
 endfunction
 
@@ -77,7 +76,7 @@ function s:RotateTape(timerId)
     let name_token = ticker . " "
 
     let close = s:model.price_data[ticker].prev_close
-    let price = s:GetLastPrice(ticker)
+    let price = s:model_interface["GetLastPrice"](ticker)
     let delta = close != -1 ? (price - close) / close : 0
     let change = delta > 0 ? 1 : delta < 0 ? -1 : 0
     
@@ -108,7 +107,7 @@ function s:RotateTape(timerId)
         let ticker = s:model.tickers[ticker_idx]
         
         let close = s:model.price_data[ticker].prev_close
-        let price = s:GetLastPrice(ticker)
+        let price = s:model_interface["GetLastPrice"](ticker)
         let delta = close != -1 ? (price - close) / close : 0
         let change = delta > 0 ? 1 : delta < 0 ? -1 : 0
     

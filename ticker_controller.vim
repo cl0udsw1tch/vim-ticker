@@ -9,6 +9,7 @@ let s:interface_name="__ticker_controller__"
 let s:interface_handle = -1
 
 let s:model = {}
+let s:model_interface = {}
 let s:api = {}
 
 
@@ -18,12 +19,12 @@ function s:CreateModel()
     :doautocmd User Ticker#CreateModel
     let s:model_handle = bufnr(s:model_name)
     let s:model = getbufvar(s:model_handle, "model")
+    let s:model_interface = getbufvar(s:model_handle, "model_interface")
     echo "Model " . s:model_handle
 endfunction
 
 function s:StartModel(tickers)
-    let F = getbufvar(s:model_handle, "StartModel")
-    :call F(a:tickers)
+    :call s:model_interface["StartModel"](a:tickers)
     echo "Model started"
 endfunction
 
@@ -34,8 +35,7 @@ function s:DestroyModel()
 endfunction
 
 function s:ClearModel()
-    let F = getbufvar(s:model_handle, "ClearModel")
-    :call F()
+    :call s:model_interface["ClearModel"]()
 endfunction
 
 
@@ -73,11 +73,11 @@ function s:DestroyTape()
 endfunction
 
 function s:CreateChart()
-    ":call s:api.ChartController.CreateChart()
+    :call s:api.ChartController.CreateChart()
 endfunction
 
 function s:DestroyChart()
-    ":call s:api.ChartController.DestroyChart()
+    :call s:api.ChartController.DestroyChart()
 endfunction
 
 function s:CreateTicker(...)

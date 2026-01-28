@@ -7,7 +7,7 @@ let s:n_bars = 20
 let s:model_name = "__ticker_model__"
 let s:model_handle = -1
 let s:model = {}
-
+let s:model_interface = {}
 " -------------------------- AUTOCOMMANDS ------------------------------
 
 augroup Ticker#Model
@@ -20,20 +20,29 @@ augroup END
 " -------------------------- LIFECYCLE -----------------------------------
 
 function s:CreateModel()
+
     if s:model_handle == -1
         let s:model_handle = bufadd("__ticker_model__")
         :call setbufvar(s:model_handle, "&buftype", "nofile")
         :call setbufvar(s:model_handle, "&bufhidden", "hide")
         :call setbufvar(s:model_handle, "&buflisted", 0)
         :call bufload(s:model_handle)   
-        :call setbufvar(s:model_handle, "StartModel", funcref("<SID>StartModel"))
-        :call setbufvar(s:model_handle, "ClearModel", funcref("<SID>ClearModel"))
-       
-        :call setbufvar(s:model_handle, "GetLastPrice", funcref("<SID>GetLastPrice"))
-        :call setbufvar(s:model_handle, "GetStreamItemVal", funcref("<SID>GetStreamItemVal")),           :call setbufvar(s:model_handle, "StreamIter", funcref("<SID>StreamIter"))
-        :call setbufvar(s:model_handle, "StreamIterIsValid", funcref("<SID>StreamIterIsValid"))
-    endif   
-    :call s:ClearModel() 
+        
+        let s:model_interface={
+                    \"StartModel": funcref("<SID>StartModel"),
+                    \"ClearModel": funcref("<SID>ClearModel"),
+                    \"GetLastPrice": funcref("<SID>GetLastPrice"),
+                    \"GetStreamItemVal": funcref("<SID>GetStreamItemVal"),
+                    \"StreamIterator": funcref("<SID>StreamIterator"),
+                    \"StreamIterIsValid": funcref("<SID>StreamIterIsValid"),
+                    \"StreamIterPrev": funcref("<SID>StreamIterPrev"),
+                    \"StreamIterReset": funcref("<SID>StreamIterReset"),
+                    \}
+        :call setbufvar(s:model_handle, "model_interface", s:model_interface)
+        :call s:ClearModel()
+    else
+        :call s:ClearModel()
+    endif
 endfunction
 
 function s:StartModel(tickers)
@@ -72,7 +81,6 @@ function s:SetTickers(tickers)
 endfunction
 
 function s:GetPrevClose()
-    echo "Getting prev close..."
     let subprocess_str = s:PrevCloseSubProcessCode()
     let cmd = ["python3", "-u", "-c", "'" . subprocess_str . "'"] + s:model.tickers
     let res = system(join(cmd, " "))
@@ -152,7 +160,7 @@ function s:NextIdx(stream)
 endfunction
 
 function s:StreamPrevIdx(stream, idx)
-    if idx == a:stream.head
+    if a:idx == a:stream.head
         return -1
     endif
     return (a:idx -1 + a:stream.capacity ) % a:stream.capacity
@@ -178,22 +186,30 @@ function s:SetStreamItemVal(stream_item, key, val)
 endfunction
 
 function s:StreamIterator(stream)
-    let idx = s:model.LastIdx(a:stream)
+    let idx = s:LastIdx(a:stream)
     return {"idx": idx, "stream": a:stream}
-
 endfunction
 
 function s:StreamIterIsValid(stream_iter)
+    if a:stream_iter.stream.size == 0
+        return 0
+    endif
     return a:stream_iter.idx != -1
 endfunction
 
-
 function s:StreamIterPrev(stream_iter)
-    let res = a:stream_iter.stream[a:stream_iter.idx]
-    a:stream_iter.idx = s:StreamPrevIdx(a:stream, a:stream_iter.idx)
+    echo "stream_iter"
+    echo a:stream_iter
+    let res = a:stream_iter.stream.buf[a:stream_iter.idx]
+    echo "res"
+    echo res
+    let a:stream_iter.idx = s:StreamPrevIdx(a:stream_iter.stream, a:stream_iter.idx)
     return res
 endfunction
 
+function s:StreamIterReset(stream_iter)
+    let a:stream_iter.idx = s:LastIdx(a:stream_iter.stream)
+endfunction
 
 " ------------------------- INTERFACE ----------------------------
 
@@ -252,6 +268,11 @@ endfunction
 " ============================== SCRIPTS ===================================
 
 function s:PrevCloseSubProcessCode()
+
+    if getenv("vim_ticker_debug")
+        return s:DEBUG_PrevCloseSubProcessCode()
+    endif
+
     let cmd  = "import yfinance as yf\n"
     let cmd .= "import sys, signal\n"
     let cmd .= "sig_handle=lambda sig,frame: sys.exit(0)\n"
@@ -270,6 +291,9 @@ function s:PrevCloseSubProcessCode()
 endfunction
 
 function s:PriceSubProcessCode()
+    if getenv("vim_ticker_debug")
+        return s:DEBUG_PriceSubProcessCode()
+    endif
     let cmd  = "import yfinance as yf\n"
     let cmd .= "import sys, time, signal\n"
     let cmd .= "sig_handle=lambda sig,frame: sys.exit(0)\n"
@@ -286,5 +310,28 @@ function s:PriceSubProcessCode()
     let cmd .= "\ttime.sleep(5)\n"
     return cmd
 endfunction
+
+function s:DEBUG_PrevCloseSubProcessCode()
+    let cmd  = "import sys\n"
+    let cmd .= "r=[str(100*i) for i in range(1, len(sys.argv))]\n"
+    let cmd .= "print(\" \".join(map(str, r)), flush=True)\n"
+    return cmd
+endfunction
+
+function s:DEBUG_PriceSubProcessCode()
+    let cmd  = "import sys, time, signal, random\n"
+    let cmd .= "sig_handle=lambda sig,frame: sys.exit(0)\n"
+    let cmd .= "signal.signal(signal.SIGTERM,sig_handle)\n"
+    let cmd .= "r=[100*i for i in range(1, len(sys.argv))]\n"
+    let cmd .= "while True:\n"
+    let cmd .= "\tfor i,name in enumerate(sys.argv[1:]):\n"
+    let cmd .= "\t\tr[i] += random.randint(-10, 10)\n"
+    let cmd .= "\t\tprint(name + \" \" + str(r[i]), flush=True)\n"
+    let cmd .= "\ttime.sleep(5)\n"
+    return cmd
+endfunction
+
+
+
 
 

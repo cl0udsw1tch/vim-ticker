@@ -1,7 +1,9 @@
 " CHART VIEW
+highlight! HL_GREEN_BAR cterm=bold ctermbg=Black ctermfg=Green guibg=#000000 guifg=#00FF00
+highlight! HL_RED_BAR cterm=bold ctermbg=Black ctermfg=Red guibg=#000000 guifg=#FF0000
 
-let s:chart_buf = -1
-let s:chart_win = -1
+let s:buf_handle = -1
+let s:win_handle = -1
 let s:ticker = ""
 let s:lines = 25
 let s:cols = 50
@@ -10,15 +12,11 @@ let s:maxPrice = -1
 let s:minPrice = pow(2, 32)
 let s:minute = -1
 let s:line_interval = -1
-
-let s:line_match_ids = repeat([v:null], s:lines)
 let s:col_match_ids = repeat([v:null], s:cols+1) " SENTINEL @ idx=0
+
 let s:interface_name = "__ticker_controller__"
 let s:interface_handle = -1
 let s:api = {}
-
-highlight! HL_GREEN_BAR cterm=bold ctermbg=Black ctermfg=Green guibg=#000000 guifg=#00FF00
-highlight! HL_RED_BAR cterm=bold ctermbg=Black ctermfg=Red guibg=#000000 guifg=#FF0000
 
 
 " ----------------------------- AUTOCOMMANDS ----------------------------
@@ -39,48 +37,39 @@ function s:CreateChartView()
                 \"ShowChart": funcref("<SID>ShowChart"),
                 \"ChangeChart": funcref("<SID>ChangeChart"),
                 \}
-    let s:chart_buf = bufadd("ticker_chart")
-    let s:chart_win = popup_create(buf, {
-                    'minWidth': a:cols,
-                    'maxWidth': a:cols,
-                    'minHeight': a:lines,
-                    'maxHeight': a:lines
-                    \})
-
-endfunction
-
-function s:CreateCharts(tickers, lines, cols)
-    for ticker in a:tickers
-        let s:chart_handles[ticker] = {}
-        
-        let buf = bufadd(a:ticker . "_chart")
-        let win = popup_create(buf, {
-                    'minWidth': a:cols,
-                    'maxWidth': a:cols,
-                    'minHeight': a:lines,
-                    'maxHeight': a:lines
-                    \})
-        let s:chart_handles[ticker] = {'buf': buf, 'win': win}
-             
-    endfor
+    let s:buf_handle = bufadd("ticker_chart")
+    let s:win_handle = popup_create(s:buf_handle, {
+                \'minWidth': s:cols,
+                \'maxWidth': s:cols,
+                \'minHeight': s:lines,
+                \'maxHeight': s:lines
+                \})
 endfunction
 
 function s:UpdateChartView(ticker, bar_iter, last_bar)
     "bar_iter is a backwards iterator, with a PREV api method
-    
+    echo "last_bar"
+    echo a:last_bar
+    echo "content"
+    echo s:content
+    echo "col_match_ids"
+    echo s:col_match_ids 
     if a:ticker != s:ticker
        :call s:ClearChartView()
         let s:ticker = a:ticker
     endif
-    let last_low = s:api.GetBarVal(a:last_bar, "LOW")
-    let last_high = s:api.GetBarVal(a:last_bar, "HIGH")
-    let last_minute = s:api.GetBarVal(a:last_bar, "MINUTE")
-    let last_open = s:api.GetBarVal(a:last_bar, "OPEN")
-    let last_close = s:api.GetBarVal(a:last_bar, "CLOSE")
+    let last_low = s:api.ChartController.GetBarVal(a:last_bar, "LOW")
+    let last_high = s:api.ChartController.GetBarVal(a:last_bar, "HIGH")
+    let last_minute = s:api.ChartController.GetBarVal(a:last_bar, "MINUTE")
+    let last_open = s:api.ChartController.GetBarVal(a:last_bar, "OPEN")
+    let last_close = s:api.ChartController.GetBarVal(a:last_bar, "CLOSE")
     
-    let hl = last_close >= last_open ? HL_GREEN_BAR : HL_RED_BAR
+    let hl = last_close >= last_open ? "HL_GREEN_BAR" : "HL_RED_BAR"
     let match_pos = map(repeat([s:cols], s:lines), "[v:key+1, v:val]")
+    echo "match_pos"
+    echo match_pos
     let s:col_match_ids[s:cols] = matchaddpos(hl, match_pos)
+
 
     let newBounds = last_high > s:maxPrice || last_low < s:minPrice
     let newBar = last_minute != s:minute
@@ -105,17 +94,30 @@ function s:UpdateChartView(ticker, bar_iter, last_bar)
     endif
 
     let bar_col = s:cols - 1
-    while s:api.BarIterIsValid(a:bar_iter)
-        let bar = s:api.BarIterPrev(a:bar_iter)
-        let low = s:api.GetBarVal(bar, "LOW")
-        let high = s:api.GetBarVal(bar, "HIGH")
-        let open = s:api.GetBarVal(bar, "OPEN")
-        let close = s:api.GetBarVal(bar, "CLOSE")
-        let minute = s:api.GetBarVal(bar, "MINUTE")
+    echo "bar_iter"
+    echo a:bar_iter
+    echo "bar_iter is valid"
+    echo  s:api.ChartController.BarIterIsValid(a:bar_iter)
+
+    while s:api.ChartController.BarIterIsValid(a:bar_iter)
+        let bar = s:api.ChartController.BarIterPrev(a:bar_iter)
+        echo "bar"
+        echo bar
+        let low = s:api.ChartController.GetBarVal(bar, "LOW")
+        let high = s:api.ChartController.GetBarVal(bar, "HIGH")
+        let open = s:api.ChartController.GetBarVal(bar, "OPEN")
+        let close = s:api.ChartController.GetBarVal(bar, "CLOSE")
+        let minute = s:api.ChartController.GetBarVal(bar, "MINUTE")
         if newBar
-            let hl = close >= open ? HL_GREEN_BAR : HL_RED_BAR
+            let hl = close >= open ? "HL_GREEN_BAR" : "HL_RED_BAR"
             let match_pos = map(repeat([bar_col], s:lines), "[v:key+1, v:val]")
-            :call matchdelete(s_col_match_ids[bar_col])
+            echo "matches"
+            echo s:col_match_ids
+            echo "bar_col"
+            echo bar_col
+            if s:col_match_ids[bar_col]
+                :call matchdelete(s:col_match_ids[bar_col])
+            endif
             let s:col_match_ids[bar_col] = matchaddpos(hl, match_pos)
         endif
         if newBounds
@@ -123,7 +125,8 @@ function s:UpdateChartView(ticker, bar_iter, last_bar)
         endif
         let bar_col -= 1
     endwhile
-    :call s:api.BarIterReset(a:bar_iter)
+    :call s:api.ChartController.BarIterReset(a:bar_iter)
+    :call s:FillContentPrefix()
     :call s:WriteContentToBuf()
 endfunction
 
@@ -145,7 +148,7 @@ function s:ShiftLines()
 endfunction
 
 function s:BarChar(line, low, high, open, close)
-    if indexof([a:low, a:high, a:open, a:close], "v.val==-1") != -1
+    if indexof([a:low, a:high, a:open, a:close], "v:val==-1") != -1
         return " " 
     endif
     let low_line = s:PriceToLine(a:low)
@@ -166,7 +169,7 @@ function s:BarChar(line, low, high, open, close)
 endfunction
 
 function s:PriceToLine(price)
-    return (a:price - a:minPrice) / s:line_interval + 1
+    return (a:price - s:minPrice) / s:line_interval + 1
 endfunction
 
 function s:LineToLoPrice(line)
@@ -177,10 +180,23 @@ function s:LineToHiPrice(line)
     return s:LineToLoPrice(a:line) + s:line_interval
 endfunction
 
+function s:FillContentPrefix()
+    let line = 1
+    while line <= s:lines
+        let width = len(s:content[line])
+        if width < s:cols
+            let n_spaces = s:cols - width
+            let s:content[line] = repeat(" ", n_spaces) . s:content[line]
+        endif
+        let line +=1
+    endwhile
+endfunction
+
+
 function s:WriteContentToBuf()
     let line = 1
     while line <= s:lines
-        :call setbufline(s:buf_handle, line, content[s:lines - line + 1]) 
+        :call setbufline(s:buf_handle, line, s:content[s:lines - line + 1]) 
         let line += 1
     endwhile
 endfunction
@@ -188,7 +204,7 @@ endfunction
 function s:ClearChartView()
     :call s:ClearChartContent()
     :call s:ClearChartHLMatches()
-    let s:line_match_ids=[]
+    let s:line_match_ids=repeat([v:null], s:cols+1)
     let s:ticker = ""
     let s:minute = -1
     let s:maxPrice = -1
@@ -196,21 +212,21 @@ function s:ClearChartView()
 endfunction
 
 function s:ClearChartContent()
-    let s:content = repeat([""], s_lines)
+    let s:content = repeat([""], s:lines+1)
 endfunction
 
 function s:ClearChartHLMatches()
     for match in s:col_match_ids
-        :call matchdelete(match)
+        if match
+            echo "prev match to clear"
+            echo match
+            :call matchdelete(match)
+        endif
     endfor
 endfunction
 
-function s:ShowChart(ticker)
-    if a:ticker != s:ticker
-        :call s:ClearChart()
-    endif
-    let s:ticker = a:ticker
-    :call s:popup_show(s:win_handle)
+function s:ShowChart()
+    :call popup_show(s:win_handle)
 endfunction
 
 function s:HideChart()
@@ -225,7 +241,9 @@ endfunction
 function s:DestroyChartView()
     :call s:ClearChartView()
     :call s:ClearChartContent()
-    :call popup_close(s:win_id)
+    if s:win_handle != -1
+    :call popup_close(s:win_handle)
+    endif
     let s:win_handle = -1
     let s:buf_handle = -1
 endfunction
