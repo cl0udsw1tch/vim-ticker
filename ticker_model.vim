@@ -307,7 +307,7 @@ function s:PriceSubProcessCode()
     let cmd .= "\t\t\tprint(name + \" \" + str(price), flush=True)\n"
     let cmd .= "\t\texcept:\n"
     let cmd .= "\t\t\tprint(name + \" -1\", flush=True)\n"
-    let cmd .= "\ttime.sleep(5)\n"
+    let cmd .= "\ttime.sleep(1)\n"
     return cmd
 endfunction
 

@@ -57,12 +57,6 @@ endfunction
 
 function s:UpdateChartView(ticker, bar_iter, last_bar)
     "bar_iter is a backwards iterator, with a PREV api method
-    "echo "last_bar"
-    "echo a:last_bar
-    "echo "content"
-    "echo s:content
-    "echo "col_match_ids"
-    "echo s:col_match_ids 
     if a:ticker != s:ticker
        :call s:ClearChartView()
         let s:ticker = a:ticker
@@ -75,10 +69,7 @@ function s:UpdateChartView(ticker, bar_iter, last_bar)
     
     "let hl = last_close >= last_open ? "HL_GREEN_BAR" : "HL_RED_BAR"
     "let match_pos = map(repeat([s:cols], s:lines), "[v:key+1, v:val]")
-    "echo "match_pos"
-    "echo match_pos
     "let s:col_match_ids[s:cols] = matchaddpos(hl, match_pos)
-
 
     let newBounds = last_high > s:maxPrice || last_low < s:minPrice
     let newBar = last_minute != s:minute
@@ -91,11 +82,16 @@ function s:UpdateChartView(ticker, bar_iter, last_bar)
 
     if !newBounds && !newBar
         :call s:UpdateLinesForBar(last_low, last_high, last_open, last_close, 1)
+        :call s:FillContentPrefix()
+        :call s:WriteContentToBuf()
         return 
     elseif !newBounds && newBar
         :call s:ShiftLines()
         :call s:UpdateLinesForBar(last_low, last_high, last_open, last_close, 1)
+        :call s:FillContentPrefix()
+        :call s:WriteContentToBuf()
         let s:minute = last_minute 
+        return
     elseif newBounds && !newBar
         :call s:UpdateLinesForBar(last_low, last_high, last_open, last_close, 1)
     elseif newBounds && newBar
@@ -104,15 +100,8 @@ function s:UpdateChartView(ticker, bar_iter, last_bar)
     endif
 
     let bar_col = s:cols - 1
-    "echo "bar_iter"
-    "echo a:bar_iter
-    "echo "bar_iter is valid"
-    "echo  s:api.ChartController.BarIterIsValid(a:bar_iter)
-
     while s:api.ChartController.BarIterIsValid(a:bar_iter)
         let bar = s:api.ChartController.BarIterPrev(a:bar_iter)
-        "echo "bar"
-        "echo bar
         let low = s:api.ChartController.GetBarVal(bar, "LOW")
         let high = s:api.ChartController.GetBarVal(bar, "HIGH")
         let open = s:api.ChartController.GetBarVal(bar, "OPEN")
@@ -121,10 +110,6 @@ function s:UpdateChartView(ticker, bar_iter, last_bar)
         if newBar && 0
             let hl = close >= open ? "HL_GREEN_BAR" : "HL_RED_BAR"
             let match_pos = map(repeat([bar_col], s:lines), "[v:key+1, v:val]")
-            "echo "matches"
-            "echo s:col_match_ids
-            "echo "bar_col"
-            "echo bar_col
             if s:col_match_ids[bar_col]
                 :call matchdelete(s:col_match_ids[bar_col])
             endif
@@ -137,11 +122,6 @@ function s:UpdateChartView(ticker, bar_iter, last_bar)
     endwhile
     :call s:api.ChartController.BarIterReset(a:bar_iter)
     :call s:FillContentPrefix()
-    if newBar
-        "echo s:minPrice
-        "echo s:maxPrice
-        "echo a:bar_iter
-    endif
     :call s:WriteContentToBuf()
 endfunction
 
@@ -170,12 +150,17 @@ function s:BarChar(line, low, high, open, close)
     let min_box = s:PriceToLine(min([a:open, a:close]))
     let max_box = s:PriceToLine(max([a:open, a:close]))
     let high_line = s:PriceToLine(a:high)
+    let change = 1
+    if max([a:open, a:close]) == a:open
+        let change = -1
+    endif
+
     if a:line < low_line
         return " "
     elseif a:line < min_box
         return "|"
     elseif a:line >= min_box && a:line <= max_box
-        return "#"
+        return change == 1 ? "^" : "v"  " "\u25B2" : "\u25BC" 
     elseif a:line > max_box && a:line < high_line
         return "|"
     else

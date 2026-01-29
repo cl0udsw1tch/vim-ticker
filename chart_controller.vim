@@ -2,7 +2,7 @@
 " CHART CONTROLLER
 
 let s:ticker_idx = 0
-let s:chart_hz = 1/2
+let s:chart_hz = 2
 let s:chart_handle = -1
 
 let s:model_name = "__ticker_model__"
