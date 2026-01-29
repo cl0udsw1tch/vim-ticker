@@ -76,7 +76,7 @@ function s:SetTickers(tickers)
     let s:model.tickers = a:tickers
     let s:model.n_tickers = len(a:tickers) 
     for ticker in a:tickers
-        let s:model.price_data[ticker] = {"prev_close": -1, "prices": s:Stream(), "last": s:StreamItem()}
+        let s:model.price_data[ticker] = {"prev_close": -1.0, "prices": s:Stream(), "last": s:StreamItem()}
     endfor 
 endfunction
 
@@ -87,7 +87,7 @@ function s:GetPrevClose()
     let close_arr = split(res, " ")
     let i = 0
     for ticker in s:model.tickers
-        let s:model.price_data[ticker].prev_close = close_arr[i] == "-1" ? -1 : str2float(close_arr[i])
+        let s:model.price_data[ticker].prev_close = close_arr[i] == "-1" ? -1.0 : str2float(close_arr[i])
         let i+=1
     endfor
 endfunction
@@ -214,7 +214,7 @@ endfunction
 " ------------------------- INTERFACE ----------------------------
 
 function s:StreamItem()
-    return [-1, -1, -1, -1, -1]
+    return [-1, -1.0, -1.0, -1.0, -1.0]
 endfunction
 
 function s:GetLast(ticker)
@@ -245,9 +245,14 @@ function s:AddPrice(ticker, price)
     if last_minute == minute
         let prev_high = s:GetLastVal(a:ticker, "HIGH")
         let prev_low = s:GetLastVal(a:ticker, "LOW")
+	:echo a:price
+	:echo prev_high
+	:echo prev_low
+	:echo "A"
         let high = max([prev_high, a:price])
         let low = min([prev_low, a:price])
         let close = a:price
+	:echo "B"
         :call s:SetLastVal(a:ticker, "CLOSE", close)
         :call s:SetLastVal(a:ticker, "LOW", low)
         :call s:SetLastVal(a:ticker, "HIGH", high)
@@ -285,7 +290,7 @@ function s:PrevCloseSubProcessCode()
     let cmd .= "\t\tclose=info[\"regularMarketPreviousClose\"]\n"
     let cmd .= "\t\tr.append(close)\n"
     let cmd .= "\texcept:\n"
-    let cmd .= "\t\tr.append(-1)\n"
+    let cmd .= "\t\tr.append(-1.0)\n"
     let cmd .= "print(\" \".join(map(str,r)), flush=True)\n"
     return cmd
 endfunction
@@ -306,14 +311,14 @@ function s:PriceSubProcessCode()
     let cmd .= "\t\t\tprice=info[\"last_price\"]\n"
     let cmd .= "\t\t\tprint(name + \" \" + str(price), flush=True)\n"
     let cmd .= "\t\texcept:\n"
-    let cmd .= "\t\t\tprint(name + \" -1\", flush=True)\n"
+    let cmd .= "\t\t\tprint(name + \" -1.0\", flush=True)\n"
     let cmd .= "\ttime.sleep(1)\n"
     return cmd
 endfunction
 
 function s:DEBUG_PrevCloseSubProcessCode()
     let cmd  = "import sys\n"
-    let cmd .= "r=[str(100*i) for i in range(1, len(sys.argv))]\n"
+    let cmd .= "r=[str(100.0*i) for i in range(1, len(sys.argv))]\n"
     let cmd .= "print(\" \".join(map(str, r)), flush=True)\n"
     return cmd
 endfunction
@@ -322,10 +327,10 @@ function s:DEBUG_PriceSubProcessCode()
     let cmd  = "import sys, time, signal, random\n"
     let cmd .= "sig_handle=lambda sig,frame: sys.exit(0)\n"
     let cmd .= "signal.signal(signal.SIGTERM,sig_handle)\n"
-    let cmd .= "r=[100*i for i in range(1, len(sys.argv))]\n"
+    let cmd .= "r=[100.0*i for i in range(1, len(sys.argv))]\n"
     let cmd .= "while True:\n"
     let cmd .= "\tfor i,name in enumerate(sys.argv[1:]):\n"
-    let cmd .= "\t\tm1,m2=100*(i+1)-50, 100*(i+1)+50\n"
+    let cmd .= "\t\tm1,m2=100.0*(i+1)-50, 100.0*(i+1)+50\n"
     let cmd .= "\t\tr[i] += random.randint(-2, 2)\n"
     let cmd .= "\t\tr[i]=min(max(r[i],m1), m2)\n"
     let cmd .= "\t\tprint(name + \" \" + str(r[i]), flush=True)\n"
