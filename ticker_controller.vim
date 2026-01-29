@@ -2,7 +2,8 @@
 " TOP-LEVEL CONTROLLER
 
 let s:max_tickers = 10
-
+let s:tape = 0
+let s:chart = 0
 let s:model_name="__ticker_model__"
 let s:model_handle=-1
 let s:interface_name="__ticker_controller__"
@@ -66,18 +67,30 @@ endfunction
 
 function s:CreateTape()
     :call s:api.TapeController.CreateTape() 
+    let s:tape=1
 endfunction
 
 function s:DestroyTape()
     :call s:api.TapeController.DestroyTape()
+    let s:tape=0
 endfunction
 
 function s:CreateChart()
-    :call s:api.ChartController.CreateChart()
+    if s:chart
+        :call s:api.ChartController.ShowChart()
+    else
+        let s:chart = 1
+        :call s:api.ChartController.CreateChart()
+    endif
 endfunction
 
 function s:DestroyChart()
     :call s:api.ChartController.DestroyChart()
+    let s:chart = 0
+endfunction
+
+function s:HideChart()
+    :call s:api.ChartController.HideChart()
 endfunction
 
 function s:CreateTicker(...)
@@ -102,8 +115,17 @@ endfunction
 
 function s:DestroyTicker()
     :call s:StopTicker()
+    if s:chart
+        let s:chart = 0
+        :call s:DestroyChart()
+    endif
+    if s:tape
+        let s:tape = 0
+        :call s:DestroyTape()
+    endif
     :call s:DestroyModel()
     :call s:DestroyInterface()
+
 endfunction
 
 
@@ -114,7 +136,7 @@ command NoTicker :call s:DestroyTicker()
 command TickerTape :call s:CreateTape()
 command NoTickerTape :call s:DestroyTape()
 command TickerChart :call s:CreateChart()
-command NoTickerChart :call s:DestroyChart()
+command NoTickerChart :call s:HideChart()
 
 
 

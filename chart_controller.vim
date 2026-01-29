@@ -35,6 +35,8 @@ function s:CreateChartController()
     let s:api.ChartController = {
         \"CreateChart":  funcref("<SID>CreateChart"),
         \"DestroyChart": funcref("<SID>DestroyChart"),
+        \"ShowChart": funcref("<SID>ShowChart"),
+        \"HideChart": funcref("<SID>HideChart"),
         \"BarIterIsValid": s:model_interface["StreamIterIsValid"],
         \"BarIterPrev": s:model_interface["StreamIterPrev"],
         \"BarIterReset": s:model_interface["StreamIterReset"],

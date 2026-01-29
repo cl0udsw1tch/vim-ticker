@@ -1,7 +1,7 @@
 " CHART VIEW
 highlight! HL_GREEN_BAR cterm=bold ctermbg=Black ctermfg=Green guibg=#000000 guifg=#00FF00
 highlight! HL_RED_BAR cterm=bold ctermbg=Black ctermfg=Red guibg=#000000 guifg=#FF0000
-
+highlight! HL_CHART cterm=bold ctermbg=Black ctermfg=Green guibg=#000000 guifg=#00FF00
 let s:buf_handle = -1
 let s:win_handle = -1
 let s:ticker = " "
@@ -50,14 +50,15 @@ function s:CreateChartView()
                 \'minWidth': s:cols,
                 \'maxWidth': s:cols,
                 \'minHeight': s:lines,
-                \'maxHeight': s:lines
+                \'maxHeight': s:lines,
+                \'highlight': "HL_CHART",
                 \})
 endfunction
 
 function s:UpdateChartView(ticker, bar_iter, last_bar)
     "bar_iter is a backwards iterator, with a PREV api method
-    echo "last_bar"
-    echo a:last_bar
+    "echo "last_bar"
+    "echo a:last_bar
     "echo "content"
     "echo s:content
     "echo "col_match_ids"
@@ -137,9 +138,9 @@ function s:UpdateChartView(ticker, bar_iter, last_bar)
     :call s:api.ChartController.BarIterReset(a:bar_iter)
     :call s:FillContentPrefix()
     if newBar
-        echo s:minPrice
-        echo s:maxPrice
-        echo a:bar_iter
+        "echo s:minPrice
+        "echo s:maxPrice
+        "echo a:bar_iter
     endif
     :call s:WriteContentToBuf()
 endfunction
