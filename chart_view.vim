@@ -75,8 +75,8 @@ function s:UpdateChartView(ticker, bar_iter, last_bar)
     let newBar = last_minute != s:minute
     if newBounds
         :call s:ClearChartContent()
-        let s:maxPrice = max([s:maxPrice, last_high])
-        let s:minPrice = min([s:minPrice, last_low])
+        let s:maxPrice = g:FloatMax([s:maxPrice, last_high])
+        let s:minPrice = g:FloatMin([s:minPrice, last_low])
         let s:line_interval = (s:maxPrice-s:minPrice)/(s:lines+0.0)
     endif
 
@@ -143,15 +143,15 @@ function s:ShiftLines()
 endfunction
 
 function s:BarChar(line, low, high, open, close)
-    if indexof([a:low, a:high, a:open, a:close], "v:val==-1") != -1
+    if g:IndexOf([a:low, a:high, a:open, a:close], 1.0) != -1
         return " " 
     endif
     let low_line = s:PriceToLine(a:low)
-    let min_box = s:PriceToLine(min([a:open, a:close]))
-    let max_box = s:PriceToLine(max([a:open, a:close]))
+    let min_box = s:PriceToLine(g:FloatMin([a:open, a:close]))
+    let max_box = s:PriceToLine(g:FloatMax([a:open, a:close]))
     let high_line = s:PriceToLine(a:high)
     let change = 1
-    if max([a:open, a:close]) == a:open
+    if g:FloatMax([a:open, a:close]) == a:open
         let change = -1
     endif
 

@@ -245,14 +245,9 @@ function s:AddPrice(ticker, price)
     if last_minute == minute
         let prev_high = s:GetLastVal(a:ticker, "HIGH")
         let prev_low = s:GetLastVal(a:ticker, "LOW")
-	:echo a:price
-	:echo prev_high
-	:echo prev_low
-	:echo "A"
-        let high = max([prev_high, a:price])
-        let low = min([prev_low, a:price])
+        let high = g:FloatMax([prev_high, a:price])
+        let low = g:FloatMin([prev_low, a:price])
         let close = a:price
-	:echo "B"
         :call s:SetLastVal(a:ticker, "CLOSE", close)
         :call s:SetLastVal(a:ticker, "LOW", low)
         :call s:SetLastVal(a:ticker, "HIGH", high)
@@ -268,7 +263,6 @@ function s:AddPrice(ticker, price)
         :call s:SetLast(a:ticker, new_stream_item)
     endif
 endfunction
-
 
 " ============================== SCRIPTS ===================================
 

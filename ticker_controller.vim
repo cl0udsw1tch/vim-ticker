@@ -1,6 +1,8 @@
 
 " TOP-LEVEL CONTROLLER
 
+:set laststatus=2
+
 let s:max_tickers = 10
 let s:tape = 0
 let s:chart = 0
@@ -13,7 +15,37 @@ let s:model = {}
 let s:model_interface = {}
 let s:api = {}
 
+function g:FloatMax(arr)
+	let r = -pow(2,32)
+	for e in a:arr
+		if e>r
+			let r=e
+		endif
+	endfor
+	return r
+endfunction
 
+function g:FloatMin(arr)
+	let r = pow(2,32)
+	for e in a:arr
+		if e<r
+			let r=e
+		endif
+	endfor
+	return r
+
+endfunction
+
+function g:IndexOf(arr, val)
+	let i = 0
+	for it in a:arr
+		if it==a:val
+			return i
+		endif
+		let i+=1
+	endfor
+	return -1
+endfunction
 " ---------------------- MODEL LIFECYCLE -------------------------
 
 function s:CreateModel()
