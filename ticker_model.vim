@@ -117,11 +117,11 @@ function s:HandleResponse(ch,msg)
 endfunction
 
 function s:HandleExit(job, exit_status)
-    echo "Ticker exited with status: " . a:exit_status 
+    "echo "Ticker exited with status: " . a:exit_status 
 endfunction
 
 function s:HandleError(ch, msg)
-    echo "Ticker error: " . a:msg
+    "echo "Ticker error: " . a:msg
 endfunction
 
 
@@ -198,11 +198,11 @@ function s:StreamIterIsValid(stream_iter)
 endfunction
 
 function s:StreamIterPrev(stream_iter)
-    echo "stream_iter"
-    echo a:stream_iter
+    "echo "stream_iter"
+    "echo a:stream_iter
     let res = a:stream_iter.stream.buf[a:stream_iter.idx]
-    echo "res"
-    echo res
+    "echo "res"
+    "echo res
     let a:stream_iter.idx = s:StreamPrevIdx(a:stream_iter.stream, a:stream_iter.idx)
     return res
 endfunction
@@ -325,9 +325,11 @@ function s:DEBUG_PriceSubProcessCode()
     let cmd .= "r=[100*i for i in range(1, len(sys.argv))]\n"
     let cmd .= "while True:\n"
     let cmd .= "\tfor i,name in enumerate(sys.argv[1:]):\n"
-    let cmd .= "\t\tr[i] += random.randint(-10, 10)\n"
+    let cmd .= "\t\tm1,m2=100*(i+1)-50, 100*(i+1)+50\n"
+    let cmd .= "\t\tr[i] += random.randint(-2, 2)\n"
+    let cmd .= "\t\tr[i]=min(max(r[i],m1), m2)\n"
     let cmd .= "\t\tprint(name + \" \" + str(r[i]), flush=True)\n"
-    let cmd .= "\ttime.sleep(5)\n"
+    let cmd .= "\ttime.sleep(1)\n"
     return cmd
 endfunction
 

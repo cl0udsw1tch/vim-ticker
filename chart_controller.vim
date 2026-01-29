@@ -26,7 +26,7 @@ augroup END
 " ------------------------ INTERFACE ------------------------------ 
 
 function s:CreateChartController()
-    echo "Creating chart controller ...."
+    "echo "Creating chart controller ...."
     let s:interface_handle = bufnr(s:interface_name)
     let s:api = getbufvar(s:interface_handle, "api")
     let s:model_handle = bufnr(s:model_name)
@@ -76,13 +76,13 @@ function s:DestroyChart()
 endfunction
 
 function s:UpdateChart(timerId)
-    echo "CONTROLLER UDPATING CHART"
+    "echo "CONTROLLER UDPATING CHART"
     let ticker = s:model.tickers[s:ticker_idx]
     let buf_iter = s:model_interface["StreamIterator"](s:model.price_data[ticker].prices)
-    echo "buf iter"
-    echo buf_iter
-    echo "price_data"
-    echo s:model.price_data[ticker]
+    "echo "buf iter"
+    "echo buf_iter
+    "echo "price_data"
+    "echo s:model.price_data[ticker]
     let last = s:model.price_data[ticker].last 
     :call s:api.ChartView.UpdateChartView(ticker, buf_iter, last) 
 endfunction
