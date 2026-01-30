@@ -10,6 +10,7 @@ let s:buf_handle = -1
 let s:win_handle = -1
 let s:ticker = " "
 let s:lines = 25
+let s:line_grps = float2nr(ceil(s:lines / 8.0))
 let s:cols = 10
 let s:content = repeat([" "], s:lines+1) " low->high prices, iterative backwards on render
 let s:maxPrice = -1
@@ -21,7 +22,17 @@ let s:col_match_state = repeat([-1], s:cols+1) " SENTINEL @ idx=0
 let s:match_pos = repeat([v:null], s:cols+1)
 let col = 1
 while col < s:cols + 1
-	let s:match_pos[col] = map(repeat([v:null], s:lines+1), "[v:key, col]")
+	let col_matches = repeat([v:null], s:line_grps)
+	let grp = 0
+	while grp < s:line_grps
+		let grp_size = 8
+		if 8*(grp+1) > s:lines
+			let grp_size = s:lines - 8*grp
+		endif
+		let col_matches[grp] = map(repeat([v:null], grp_size), "[grp*8 + v:key+1, col]")
+		let grp+=1
+	endwhile
+	let s:match_pos[col] = col_matches
 	let col += 1
 endwhile
 let s:interface_name = "__ticker_controller__"
@@ -54,8 +65,8 @@ function s:CreateChartView()
     :call setbufvar(s:buf_handle, "&modifiable", 1)
     :call bufload(s:buf_handle)
     let s:win_handle = popup_create(s:buf_handle, {
-                \'pos':'topleft',
-		\'col': 1,
+                \'pos':'topright',
+		\'col': &columns,
 		\'line': 1,
                 \'minWidth': s:cols,
                 \'maxWidth': s:cols,
@@ -82,6 +93,10 @@ function s:UpdateChartView(ticker, bar_iter, last_bar)
     let last_open = s:api.ChartController.GetBarVal(a:last_bar, "OPEN")
     let last_close = s:api.ChartController.GetBarVal(a:last_bar, "CLOSE")
    
+    let hl = last_close >= last_open 
+    :call s:UpdateColHL(s:cols, hl)
+
+
     
     let newBounds = last_high > s:maxPrice || last_low < s:minPrice
     let newBar = last_minute > s:minute
@@ -113,9 +128,6 @@ function s:UpdateChartView(ticker, bar_iter, last_bar)
         let s:minute = last_minute
     endif
    
-    let hl = last_close >= last_open 
-    :call s:UpdateColHL(s:cols, hl)
-
     let bar_col = s:cols - 1
     while s:api.ChartController.BarIterIsValid(a:bar_iter)
         let bar = s:api.ChartController.BarIterPrev(a:bar_iter)
@@ -144,33 +156,34 @@ function s:UpdateColHL(col, hl)
 	endif
 
 	if s:col_match_state[a:col] == -1
-		:call matchaddpos(s:HL_MAP[a:hl], s:match_pos[a:col][1:], 10, a:col, {"window": s:win_handle})
+		:call s:AddColHLGrps(a:col, a:hl)
 		let s:col_match_state[a:col] = a:hl
     	elseif s:col_match_state[a:col] == a:hl
 		" NO OP
     	else
-		:call matchdelete(a:col, s:win_handle)
-		:call matchaddpos(s:HL_MAP[a:hl], s:match_pos[a:col][1:], 10, a:col, {"window": s:win_handle})
+		:call s:DeleteColHLGrps(a:col)
+		:call s:AddColHLGrps(a:col, a:hl)
    		let s:col_match_state[a:col] = a:hl
     	endif
 endfunction
 
-function s:ApplyColHL()
-	if !s:HL_ON
-		return
-	endif
 
-	if s:col_match_state[a:col] == -1
-		:call matchaddpos(s:HL_MAP[a:hl], s:match_pos[a:col], 10, a:col, {"window": s:win_handle})
-		let s:col_match_state[a:col] = a:hl
-    	elseif s:col_match_state[a:col] == a:hl
-	    	"NO OP"
-    	else
-		:call matchdelete(a:col, s:win_handle)
-		:call matchaddpos(s:HL_MAP[a:hl], s:match_pos[a:col], 10, a:col, {"window": s:win_handle})
-   		let s:col_match_state[a:col] = a:hl
-    	endif
+function s:AddColHLGrps(col, hl)
+	let grp = 0
+	while grp < s:line_grps
+		let hl_grp_id = 8 * (a:col - 1) + grp
+		:call matchaddpos(s:HL_MAP[a:hl], s:match_pos[a:col][grp], 10, hl_grp_id, {"window": s:win_handle})
+		let grp +=1
+	endwhile
+endfunction
 
+function s:DeleteColHLGrps(col)
+	let grp = 0
+	while grp < s:line_grps
+		let hl_grp_id = 8 * (a:col - 1) + grp
+		:call matchdelete(hl_grp_id, s:win_handle)
+		let grp +=1
+	endwhile
 endfunction
 
 function s:UpdateLinesForBar(low, high, open, close, isLast)
@@ -273,7 +286,7 @@ function s:ClearChartHLMatches()
 		if hl == -1
 			" NO OP
 		else
-			:call matchdelete(col, s:win_handle)
+			:call s:DeleteColHLGrps(col) 
 		endif 
 		let col += 1
 	endwhile
