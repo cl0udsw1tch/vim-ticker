@@ -33,7 +33,6 @@ function g:FloatMin(arr)
 		endif
 	endfor
 	return r
-
 endfunction
 
 function g:IndexOf(arr, val)
