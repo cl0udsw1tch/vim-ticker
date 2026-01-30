@@ -2,7 +2,7 @@
 highlight! HL_GREEN_BAR cterm=bold ctermbg=Black ctermfg=Green guibg=#000000 guifg=#00FF00
 highlight! HL_RED_BAR cterm=bold ctermbg=Black ctermfg=Red guibg=#000000 guifg=#FF0000
 highlight! HL_CHART cterm=bold ctermbg=Black ctermfg=Green guibg=#000000 guifg=#00FF00
-
+highlight! HL_BORDER cterm=bold ctermbg=Black ctermfg=White guibg=#000000 guifg=#000000
 let s:hl = 1
 
 let s:buf_handle = -1
@@ -47,14 +47,16 @@ function s:CreateChartView()
     :call setbufvar(s:buf_handle, "&modifiable", 1)
 
     let s:win_handle = popup_create(s:buf_handle, {
-                \'pos':'topleft',
-                \'line': 1,
-                \'col': 1, 
+                \'pos':'center',
                 \'minWidth': s:cols,
                 \'maxWidth': s:cols,
                 \'minHeight': s:lines,
                 \'maxHeight': s:lines,
                 \'highlight': "HL_CHART",
+                \'padding': [2,2,2,2],
+                \'border': [2,2,2,2],
+                \'borderhighlight': ["HL_BORDER"],
+                \'title': s:ticker
                 \})
 endfunction
 
@@ -62,7 +64,8 @@ function s:UpdateChartView(ticker, bar_iter, last_bar)
     "bar_iter is a backwards iterator, with a PREV api method
     if a:ticker != s:ticker
        :call s:ClearChartView()
-        let s:ticker = a:ticker
+       let s:ticker = a:ticker
+       :call popup_setoptions(s:win_handle, {'title': s:ticker})
     endif
     let last_low = s:api.ChartController.GetBarVal(a:last_bar, "LOW")
     let last_high = s:api.ChartController.GetBarVal(a:last_bar, "HIGH")
