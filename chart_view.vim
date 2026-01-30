@@ -1,22 +1,29 @@
 " CHART VIEW
 highlight! HL_GREEN_BAR cterm=bold ctermbg=Black ctermfg=Green guibg=#000000 guifg=#00FF00
 highlight! HL_RED_BAR cterm=bold ctermbg=Black ctermfg=Red guibg=#000000 guifg=#FF0000
-highlight! HL_CHART cterm=bold ctermbg=Black ctermfg=Green guibg=#000000 guifg=#00FF00
-highlight! HL_BORDER cterm=bold ctermbg=Black ctermfg=White guibg=#000000 guifg=#000000
-let s:hl = 1
+highlight! HL_CHART cterm=NONE ctermbg=NONE ctermfg=NONE guibg=NONE guifg=NONE
+highlight! HL_BORDER cterm=NONE ctermbg=NONE ctermfg=NONE guibg=NONE guifg=NONE
+let s:HL_MAP = ["HL_RED_BAR", "HL_GREEN_BAR"]
+let s:HL_ON = 1
 
 let s:buf_handle = -1
 let s:win_handle = -1
 let s:ticker = " "
 let s:lines = 25
 let s:cols = 50
-let s:content = repeat([""], s:lines+1) " low->high prices, iterative backwards on render
+let s:content = repeat([" "], s:lines+1) " low->high prices, iterative backwards on render
 let s:maxPrice = -1
 let s:minPrice = pow(2, 32)
 let s:minute = -1
 let s:line_interval = -1
-let s:col_match_ids = repeat([v:null], s:cols+1) " SENTINEL @ idx=0
+let s:col_match_state = repeat([-1], s:cols+1) " SENTINEL @ idx=0
 
+let s:match_pos = repeat([v:null], s:cols+1)
+let col = 1
+while col < s:cols + 1
+	let s:match_pos[col] = map(repeat([v:null], s:lines+1), "[v:key, col]")
+	let col += 1
+endwhile
 let s:interface_name = "__ticker_controller__"
 let s:interface_handle = -1
 let s:api = {}
@@ -45,16 +52,18 @@ function s:CreateChartView()
     :call setbufvar(s:buf_handle, "&buftype", "nofile")
     :call setbufvar(s:buf_handle, "&readonly", 0)
     :call setbufvar(s:buf_handle, "&modifiable", 1)
-
+    :call bufload(s:buf_handle)
     let s:win_handle = popup_create(s:buf_handle, {
-                \'pos':'center',
+                \'pos':'topleft',
+		\'col': 1,
+		\'line': 1,
                 \'minWidth': s:cols,
                 \'maxWidth': s:cols,
                 \'minHeight': s:lines,
                 \'maxHeight': s:lines,
-                \'highlight': "HL_CHART",
-                \'padding': [2,2,2,2],
-                \'border': [2,2,2,2],
+		\'padding': [2,2,2,2],
+		\'border': [2,2,2,2],
+		\'highlight': 'HL_CHART',
                 \'borderhighlight': ["HL_BORDER"],
                 \'title': s:ticker
                 \})
@@ -73,14 +82,9 @@ function s:UpdateChartView(ticker, bar_iter, last_bar)
     let last_open = s:api.ChartController.GetBarVal(a:last_bar, "OPEN")
     let last_close = s:api.ChartController.GetBarVal(a:last_bar, "CLOSE")
    
-    if s:hl 
-    let hl = last_close >= last_open ? "HL_GREEN_BAR" : "HL_RED_BAR"
-    let match_pos = map(repeat([s:cols], s:lines), "[v:key+1, v:val]")
-    let s:col_match_ids[s:cols] = matchaddpos(hl, match_pos, 10, -1, {"window": s:win_handle})
-    endif
-
+    
     let newBounds = last_high > s:maxPrice || last_low < s:minPrice
-    let newBar = last_minute != s:minute
+    let newBar = last_minute > s:minute
     if newBounds
         :call s:ClearChartContent()
         let s:maxPrice = g:FloatMax([s:maxPrice, last_high])
@@ -108,6 +112,9 @@ function s:UpdateChartView(ticker, bar_iter, last_bar)
         :call s:UpdateLinesForBar(last_low, last_high, last_open, last_close, 1)
         let s:minute = last_minute
     endif
+   
+    let hl = last_close >= last_open 
+    :call s:UpdateColHL(s:cols, hl)
 
     let bar_col = s:cols - 1
     while s:api.ChartController.BarIterIsValid(a:bar_iter)
@@ -117,14 +124,10 @@ function s:UpdateChartView(ticker, bar_iter, last_bar)
         let open = s:api.ChartController.GetBarVal(bar, "OPEN")
         let close = s:api.ChartController.GetBarVal(bar, "CLOSE")
         let minute = s:api.ChartController.GetBarVal(bar, "MINUTE")
-        if newBar && s:hl 
-            let hl = close >= open ? "HL_GREEN_BAR" : "HL_RED_BAR"
-            let match_pos = map(repeat([bar_col], s:lines), "[v:key+1, v:val]")
-            if s:col_match_ids[bar_col]
-                :call matchdelete(s:col_match_ids[bar_col],  s:win_handle)
-            endif
-            let s:col_match_ids[bar_col] = matchaddpos(hl, match_pos, 10, -1, {"window": s:win_handle})
-        endif
+        if newBar
+            let hl = close >= open
+	    :call s:UpdateColHL(bar_col, hl)
+	endif 
         if newBounds
             :call s:UpdateLinesForBar(low, high, open, close, 0)
         endif
@@ -133,6 +136,41 @@ function s:UpdateChartView(ticker, bar_iter, last_bar)
     :call s:api.ChartController.BarIterReset(a:bar_iter)
     :call s:FillContentPrefix()
     :call s:WriteContentToBuf()
+endfunction
+
+function s:UpdateColHL(col, hl)
+	if !s:HL_ON
+		return
+	endif
+
+	if s:col_match_state[a:col] == -1
+		:call matchaddpos(s:HL_MAP[a:hl], s:match_pos[a:col][1:], 10, a:col, {"window": s:win_handle})
+		let s:col_match_state[a:col] = a:hl
+    	elseif s:col_match_state[a:col] == a:hl
+		" NO OP
+    	else
+		:call matchdelete(a:col, s:win_handle)
+		:call matchaddpos(s:HL_MAP[a:hl], s:match_pos[a:col][1:], 10, a:col, {"window": s:win_handle})
+   		let s:col_match_state[a:col] = a:hl
+    	endif
+endfunction
+
+function s:ApplyColHL()
+	if !s:HL_ON
+		return
+	endif
+
+	if s:col_match_state[a:col] == -1
+		:call matchaddpos(s:HL_MAP[a:hl], s:match_pos[a:col], 10, a:col, {"window": s:win_handle})
+		let s:col_match_state[a:col] = a:hl
+    	elseif s:col_match_state[a:col] == a:hl
+	    	"NO OP"
+    	else
+		:call matchdelete(a:col, s:win_handle)
+		:call matchaddpos(s:HL_MAP[a:hl], s:match_pos[a:col], 10, a:col, {"window": s:win_handle})
+   		let s:col_match_state[a:col] = a:hl
+    	endif
+
 endfunction
 
 function s:UpdateLinesForBar(low, high, open, close, isLast)
@@ -213,9 +251,7 @@ endfunction
 
 function s:ClearChartView()
     :call s:ClearChartContent()
-    if s:hl
     :call s:ClearChartHLMatches()
-    endif
     let s:ticker = " "
     let s:minute = -1
     let s:maxPrice = -1
@@ -227,12 +263,20 @@ function s:ClearChartContent()
 endfunction
 
 function s:ClearChartHLMatches()
-    for match in s:col_match_ids
-        if match
-            :call matchdelete(match,  s:win_handle)
-        endif
-    endfor
-    let s:line_match_ids=repeat([v:null], s:cols+1)
+	if !s:HL_ON
+		return
+	endif
+
+    	let col = 1
+    	while col < s:cols + 1
+		let hl = s:col_match_state[col]
+		if hl == -1
+			" NO OP
+		else
+			:call matchdelete(col, s:win_handle)
+		endif 
+		let col += 1
+	endwhile
 endfunction
 
 function s:ShowChart()
