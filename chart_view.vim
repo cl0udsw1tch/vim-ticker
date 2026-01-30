@@ -2,6 +2,9 @@
 highlight! HL_GREEN_BAR cterm=bold ctermbg=Black ctermfg=Green guibg=#000000 guifg=#00FF00
 highlight! HL_RED_BAR cterm=bold ctermbg=Black ctermfg=Red guibg=#000000 guifg=#FF0000
 highlight! HL_CHART cterm=bold ctermbg=Black ctermfg=Green guibg=#000000 guifg=#00FF00
+
+let s:hl = 1
+
 let s:buf_handle = -1
 let s:win_handle = -1
 let s:ticker = " "
@@ -66,10 +69,12 @@ function s:UpdateChartView(ticker, bar_iter, last_bar)
     let last_minute = s:api.ChartController.GetBarVal(a:last_bar, "MINUTE")
     let last_open = s:api.ChartController.GetBarVal(a:last_bar, "OPEN")
     let last_close = s:api.ChartController.GetBarVal(a:last_bar, "CLOSE")
-    
-    "let hl = last_close >= last_open ? "HL_GREEN_BAR" : "HL_RED_BAR"
-    "let match_pos = map(repeat([s:cols], s:lines), "[v:key+1, v:val]")
-    "let s:col_match_ids[s:cols] = matchaddpos(hl, match_pos)
+   
+    if s:hl 
+    let hl = last_close >= last_open ? "HL_GREEN_BAR" : "HL_RED_BAR"
+    let match_pos = map(repeat([s:cols], s:lines), "[v:key+1, v:val]")
+    let s:col_match_ids[s:cols] = matchaddpos(hl, match_pos, 10, -1, {"window": s:win_handle})
+    endif
 
     let newBounds = last_high > s:maxPrice || last_low < s:minPrice
     let newBar = last_minute != s:minute
@@ -78,6 +83,9 @@ function s:UpdateChartView(ticker, bar_iter, last_bar)
         let s:maxPrice = g:FloatMax([s:maxPrice, last_high])
         let s:minPrice = g:FloatMin([s:minPrice, last_low])
         let s:line_interval = (s:maxPrice-s:minPrice)/(s:lines+0.0)
+    endif
+    if newBar
+        "echo a:bar_iter
     endif
 
     if !newBounds && !newBar
@@ -91,7 +99,6 @@ function s:UpdateChartView(ticker, bar_iter, last_bar)
         :call s:FillContentPrefix()
         :call s:WriteContentToBuf()
         let s:minute = last_minute 
-        return
     elseif newBounds && !newBar
         :call s:UpdateLinesForBar(last_low, last_high, last_open, last_close, 1)
     elseif newBounds && newBar
@@ -107,13 +114,13 @@ function s:UpdateChartView(ticker, bar_iter, last_bar)
         let open = s:api.ChartController.GetBarVal(bar, "OPEN")
         let close = s:api.ChartController.GetBarVal(bar, "CLOSE")
         let minute = s:api.ChartController.GetBarVal(bar, "MINUTE")
-        if newBar && 0
+        if newBar && s:hl 
             let hl = close >= open ? "HL_GREEN_BAR" : "HL_RED_BAR"
             let match_pos = map(repeat([bar_col], s:lines), "[v:key+1, v:val]")
             if s:col_match_ids[bar_col]
-                :call matchdelete(s:col_match_ids[bar_col])
+                :call matchdelete(s:col_match_ids[bar_col],  s:win_handle)
             endif
-            let s:col_match_ids[bar_col] = matchaddpos(hl, match_pos)
+            let s:col_match_ids[bar_col] = matchaddpos(hl, match_pos, 10, -1, {"window": s:win_handle})
         endif
         if newBounds
             :call s:UpdateLinesForBar(low, high, open, close, 0)
@@ -150,17 +157,17 @@ function s:BarChar(line, low, high, open, close)
     let min_box = s:PriceToLine(g:FloatMin([a:open, a:close]))
     let max_box = s:PriceToLine(g:FloatMax([a:open, a:close]))
     let high_line = s:PriceToLine(a:high)
-    let change = 1
-    if g:FloatMax([a:open, a:close]) == a:open
-        let change = -1
-    endif
+    "let change = 1
+    "if g:FloatMax([a:open, a:close]) == a:open
+    "    let change = -1
+    "endif
 
     if a:line < low_line
         return " "
     elseif a:line < min_box
         return "|"
     elseif a:line >= min_box && a:line <= max_box
-        return change == 1 ? "^" : "v"  " "\u25B2" : "\u25BC" 
+        return "#" 
     elseif a:line > max_box && a:line < high_line
         return "|"
     else
@@ -203,7 +210,9 @@ endfunction
 
 function s:ClearChartView()
     :call s:ClearChartContent()
-    ":call s:ClearChartHLMatches()
+    if s:hl
+    :call s:ClearChartHLMatches()
+    endif
     let s:ticker = " "
     let s:minute = -1
     let s:maxPrice = -1
@@ -217,9 +226,7 @@ endfunction
 function s:ClearChartHLMatches()
     for match in s:col_match_ids
         if match
-            "echo "prev match to clear"
-            "echo match
-            :call matchdelete(match)
+            :call matchdelete(match,  s:win_handle)
         endif
     endfor
     let s:line_match_ids=repeat([v:null], s:cols+1)
