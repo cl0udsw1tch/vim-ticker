@@ -37,6 +37,8 @@ function s:CreateChartController()
         \"DestroyChart": funcref("<SID>DestroyChart"),
         \"ShowChart": funcref("<SID>ShowChart"),
         \"HideChart": funcref("<SID>HideChart"),
+        \"NextChart": funcref("<SID>NextChart"),
+        \"PrevChart": funcref("<SID>PrevChart"),
         \"BarIterIsValid": s:model_interface["StreamIterIsValid"],
         \"BarIterPrev": s:model_interface["StreamIterPrev"],
         \"BarIterReset": s:model_interface["StreamIterReset"],

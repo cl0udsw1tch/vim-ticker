@@ -3,6 +3,7 @@ highlight! HL_GREEN_BAR cterm=bold ctermbg=Black ctermfg=Green guibg=#000000 gui
 highlight! HL_RED_BAR cterm=bold ctermbg=Black ctermfg=Red guibg=#000000 guifg=#FF0000
 highlight! HL_CHART cterm=NONE ctermbg=Black ctermfg=NONE guibg=#000000 guifg=NONE
 highlight! HL_BORDER cterm=NONE ctermbg=Black ctermfg=NONE guibg=#000000 guifg=NONE
+highlight! HL_NONE cterm=NONE ctermbg=NONE ctermfg=NONE guibg=NONE guifg=NONE
 let s:HL_MAP = ["HL_RED_BAR", "HL_GREEN_BAR"]
 let s:HL_ON = 1
 
@@ -38,6 +39,10 @@ while col < s:cols + 1
     let s:match_ids[col] = grouped_matches
 	let col += 1
 endwhile
+
+let s:min_handle=-1
+let s:max_handle=-1
+
 let s:interface_name = "__ticker_controller__"
 let s:interface_handle = -1
 let s:api = {}
@@ -69,26 +74,39 @@ function s:CreateChartView()
     :call bufload(s:buf_handle)
     let s:win_handle = popup_create(s:buf_handle, {
                 \'pos':'topright',
-		\'col': &columns,
-		\'line': 1,
+		        \'col': &columns,
+		        \'line': 1,
                 \'minWidth': s:cols,
                 \'maxWidth': s:cols,
                 \'minHeight': s:lines,
                 \'maxHeight': s:lines,
-		\'padding': [2,2,2,2],
-		\'border': [2,2,2,2],
-		\'highlight': 'HL_CHART',
+		        \'padding': [2,2,2,2],
+		        \'border': [2,2,2,2],
+		        \'highlight': 'HL_CHART',
                 \'borderhighlight': ["HL_BORDER"],
                 \'title': s:ticker
                 \})
+    let s:min_handle = popup_create("min_price",{
+                \"pos": "topright",
+                \'col': &columns - s:cols - 8,
+                \'line': 4+s:lines,
+                \'highlight': "HL_NONE",
+                \})
+    let s:max_handle = popup_create("max_price",{
+                \"pos": "topright",
+                \'col': &columns - s:cols - 8,
+                \'line': 4,
+                \'highlight': "HL_NONE",
+                \})
+    :call popup_hide(s:win_handle)
+    :call popup_hide(s:min_handle)
+    :call popup_hide(s:max_handle)
 endfunction
 
 function s:UpdateChartView(ticker, bar_iter, last_bar)
     "bar_iter is a backwards iterator, with a PREV api method
     if a:ticker != s:ticker
-       :call s:ClearChartView()
-       let s:ticker = a:ticker
-       :call popup_setoptions(s:win_handle, {'title': s:ticker})
+        :call s:ChangeChart(a:ticker)
     endif
     let last_low = s:api.ChartController.GetBarVal(a:last_bar, "LOW")
     let last_high = s:api.ChartController.GetBarVal(a:last_bar, "HIGH")
@@ -257,6 +275,8 @@ function s:WriteContentToBuf()
         :call setbufline(s:buf_handle, line, s:content[s:lines - line + 1]) 
         let line += 1
     endwhile
+    :call popup_settext(s:min_handle, printf("%.2f", s:minPrice) . " ->")
+    :call popup_settext(s:max_handle, printf("%.2f", s:maxPrice) . " ->")
 endfunction
 
 function s:ClearChartView()
@@ -292,15 +312,20 @@ endfunction
 
 function s:ShowChart()
     :call popup_show(s:win_handle)
+    :call popup_show(s:min_handle)
+    :call popup_show(s:max_handle)
 endfunction
 
 function s:HideChart()
     :call popup_hide(s:win_handle)
+    :call popup_hide(s:min_handle)
+    :call popup_hide(s:max_handle)
 endfunction
 
 function s:ChangeChart(ticker)
     call s:ClearChartView()
     let s:ticker = a:ticker
+    :call popup_setoptions(s:win_handle, {'title': s:ticker})
 endfunction
 
 function s:DestroyChartView()
@@ -308,9 +333,13 @@ function s:DestroyChartView()
     :call s:ClearChartContent()
     if s:win_handle != -1
     :call popup_close(s:win_handle)
+    :call popup_close(s:min_handle)
+    :call popup_close(s:max_handle)
     endif
     let s:win_handle = -1
     let s:buf_handle = -1
+    let s:min_handle = -1
+    let s:max_handle = -1
 endfunction
             
 

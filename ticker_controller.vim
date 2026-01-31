@@ -124,6 +124,14 @@ function s:HideChart()
     :call s:api.ChartController.HideChart()
 endfunction
 
+function s:NextChart()
+    :call s:api.ChartController.NextChart()
+endfunction
+
+function s:PrevChart()
+    :call s:api.ChartController.PrevChart()
+endfunction
+
 function s:CreateTicker(...)
     "echo "Tickers "
     "echo  a:000
@@ -168,7 +176,8 @@ command TickerTape :call s:CreateTape()
 command NoTickerTape :call s:DestroyTape()
 command TickerChart :call s:CreateChart()
 command NoTickerChart :call s:HideChart()
-
+command NextTickerChart :call s:NextChart()
+command PrevTickerChart :call s:PrevChart()
 
 
 
