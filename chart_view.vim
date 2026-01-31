@@ -42,7 +42,8 @@ endwhile
 
 let s:min_handle=-1
 let s:max_handle=-1
-
+let s:t0_handle=-1
+let s:t1_handle=1
 let s:interface_name = "__ticker_controller__"
 let s:interface_handle = -1
 let s:api = {}
@@ -86,6 +87,8 @@ function s:CreateChartView()
                 \'borderhighlight': ["HL_BORDER"],
                 \'title': s:ticker
                 \})
+
+    let win_pos = popup_getpos(s:win_handle)
     let s:min_handle = popup_create("min_price",{
                 \"pos": "topright",
                 \'col': &columns - s:cols - 8,
@@ -98,9 +101,23 @@ function s:CreateChartView()
                 \'line': 4,
                 \'highlight': "HL_NONE",
                 \})
+    let s:t0_handle = popup_create("t0_handle",{
+                \'pos': 'topleft',
+                \'col': &columns - s:cols - 4,
+                \'line': s:lines + 8,
+                \'highlight': "HL_NONE" 
+                \})
+    let s:t1_handle = popup_create("t1_handle", {
+                \'pos': 'topleft',
+                \'col': &columns - 4,
+                \'line': s:lines+8,
+                \'highlight': 'HL_NONE'
+                \})
     :call popup_hide(s:win_handle)
     :call popup_hide(s:min_handle)
     :call popup_hide(s:max_handle)
+    :call popup_hide(s:t0_handle)
+    :call popup_hide(s:t1_handle)
 endfunction
 
 function s:UpdateChartView(ticker, bar_iter, last_bar)
@@ -124,6 +141,10 @@ function s:UpdateChartView(ticker, bar_iter, last_bar)
         let s:maxPrice = g:FloatMax([s:maxPrice, last_high])
         let s:minPrice = g:FloatMin([s:minPrice, last_low])
         let s:line_interval = (s:maxPrice-s:minPrice)/(s:lines+0.0)
+    endif
+    if newBar
+        let s:t1 = strftime("%H:%M", last_minute)
+        let s:t0 = strftime("%H:%M", last_minute - (s:cols - 1)*60)
     endif
 
     if !newBounds && !newBar
@@ -277,6 +298,8 @@ function s:WriteContentToBuf()
     endwhile
     :call popup_settext(s:min_handle, printf("%.2f", s:minPrice) . " ->")
     :call popup_settext(s:max_handle, printf("%.2f", s:maxPrice) . " ->")
+    :call popup_settext(s:t0_handle, s:t0)
+    :call popup_settext(s:t1_handle, s:t1)
 endfunction
 
 function s:ClearChartView()
@@ -314,12 +337,16 @@ function s:ShowChart()
     :call popup_show(s:win_handle)
     :call popup_show(s:min_handle)
     :call popup_show(s:max_handle)
+    :call popup_show(s:t0_handle)
+    :call popup_show(s:t1_handle)
 endfunction
 
 function s:HideChart()
     :call popup_hide(s:win_handle)
     :call popup_hide(s:min_handle)
     :call popup_hide(s:max_handle)
+    :call popup_hide(s:t0_handle)
+    :call popup_hide(s:t1_handle)
 endfunction
 
 function s:ChangeChart(ticker)
@@ -335,11 +362,15 @@ function s:DestroyChartView()
     :call popup_close(s:win_handle)
     :call popup_close(s:min_handle)
     :call popup_close(s:max_handle)
+    :call popup_close(s:t0_handle)
+    :call popup_close(s:t1_handle)
     endif
     let s:win_handle = -1
     let s:buf_handle = -1
     let s:min_handle = -1
     let s:max_handle = -1
+    let s:t0_handle = -1
+    let s:t1_handle = -1
 endfunction
             
 

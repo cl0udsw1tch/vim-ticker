@@ -43,7 +43,7 @@ Inspired by classic ticker tapes and status monitors, but built for modern termi
 :TickerChart
 
 " Switch charts
-:NextTickerChart
+:TickerNextChart
 
 " Stop everything
 :NoTicker
