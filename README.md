@@ -49,5 +49,5 @@ Inspired by classic ticker tapes and status monitors, but built for modern termi
 :NoTicker
 ```
 
-!**NOTE**!
-Must launch vim from a shell with an active Python environment that has *yfinance* installed. 
+> ## NOTE 
+> Must launch vim from a shell with an active Python environment that has **yfinance** installed. 
