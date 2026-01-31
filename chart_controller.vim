@@ -63,12 +63,16 @@ endfunction
 
 function s:NextChart()
     let s:ticker_idx = (s:ticker_idx + 1) % s:model.n_tickers
-    :call s:api.ChartView.ChangeChart(s:model.tickers[s:ticker_idx])
+    let ticker = s:model.tickers[s:ticker_idx]
+    let buf_iter = s:model_interface["StreamIterator"](s:model.price_data[ticker].prices)
+    :call s:api.ChartView.ChangeChart(s:model.tickers[s:ticker_idx], buf_iter)
 endfunction
 
 function s:PrevChart()
      let s:ticker_idx = (s:ticker_idx - 1) % s:model.n_tickers
-    :call s:api.ChartView.ChangeChart(s:model.tickers[s:ticker_idx])
+     let ticker = s:model.tickers[s:ticker_idx]
+     let buf_iter = s:model_interface["StreamIterator"](s:model.price_data[ticker].prices)
+    :call s:api.ChartView.ChangeChart(s:model.tickers[s:ticker_idx], buf_iter)
 endfunction
 
 function s:DestroyChart()

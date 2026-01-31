@@ -10,8 +10,8 @@ let s:HL_POS = "%#HL_POS#"
 let s:HL_NEG = "%#HL_NEG#"
 let s:HL_NTL = s:HL_SYM
 let s:HL_Map = {-1: s:HL_NEG, 0: s:HL_NTL, 1: s:HL_POS}
-let s:change_sym_map =  {-1: "\u25BC", 0: "\u25B2" , 1: "\u25B2"}
-
+let s:change_sym_map =  {-1: "\u25BC ", 0: "\u25B2 " , 1: "\u25B2 "}
+let s:percent_char = "\uFE6A"
 let s:ticker_head_offset = 0
 let s:ticker_head = 0
 let s:tape_len = 25
@@ -80,7 +80,7 @@ function s:RotateTape(timerId)
     let change = delta > 0 ? 1 : delta < 0 ? -1 : 0
     
     let price_token = s:FormatPrice(price) . " "
-    let delta_token = "(" . s:change_sym_map[change] .  s:FormatDelta(delta) . ") "
+    let delta_token = "(" . s:change_sym_map[change] . s:FormatDelta(delta) . ") "
     let m_name = strchars(name_token)
     let m_price = strchars(price_token)
     let m_delta = strchars(delta_token)
@@ -152,7 +152,7 @@ function s:FormatDelta(raw_float)
     if a:raw_float == 0
         return "0"
     endif
-    let fdelta = printf("%.2f", abs(a:raw_float)*100) . "\uFE6A"
+    let fdelta = printf("%.2f", abs(a:raw_float)*100) . s:percent_char 
     return fdelta
 endfunction
 

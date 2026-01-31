@@ -216,7 +216,7 @@ endfunction
 " ------------------------- INTERFACE ----------------------------
 
 function s:StreamItem()
-    return [-1, -1.0, -1.0, -1.0, -1.0]
+    return [-1, -1.0, -1.0, -1.0, pow(2, 32)+0.0]
 endfunction
 
 function s:GetLast(ticker)

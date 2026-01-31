@@ -122,8 +122,10 @@ endfunction
 
 function s:UpdateChartView(ticker, bar_iter, last_bar)
     "bar_iter is a backwards iterator, with a PREV api method
-    if a:ticker != s:ticker
-        :call s:ChangeChart(a:ticker)
+    let newChart =  a:ticker != s:ticker
+
+    if newChart
+        :call s:ChangeChart(a:ticker, a:bar_iter)
     endif
     let last_low = s:api.ChartController.GetBarVal(a:last_bar, "LOW")
     let last_high = s:api.ChartController.GetBarVal(a:last_bar, "HIGH")
@@ -136,7 +138,8 @@ function s:UpdateChartView(ticker, bar_iter, last_bar)
     
     let newBounds = last_high > s:maxPrice || last_low < s:minPrice
     let newBar = last_minute > s:minute
-    if newBounds
+
+    if newBounds || newChart
         :call s:ClearChartContent()
         let s:maxPrice = g:FloatMax([s:maxPrice, last_high])
         let s:minPrice = g:FloatMin([s:minPrice, last_low])
@@ -147,6 +150,10 @@ function s:UpdateChartView(ticker, bar_iter, last_bar)
         let s:t0 = strftime("%H:%M", last_minute - (s:cols - 1)*60)
     endif
 
+    if newChart
+        :call s:UpdateLinesForBar(last_low, last_high, last_open, last_close, 1)
+        let s:minute=last_minute
+    else
     if !newBounds && !newBar
         :call s:UpdateLinesForBar(last_low, last_high, last_open, last_close, 1)
         :call s:FillContentPrefix()
@@ -164,7 +171,8 @@ function s:UpdateChartView(ticker, bar_iter, last_bar)
         :call s:UpdateLinesForBar(last_low, last_high, last_open, last_close, 1)
         let s:minute = last_minute
     endif
-   
+    endif
+
     let bar_col = s:cols - 1
     while s:api.ChartController.BarIterIsValid(a:bar_iter) && bar_col > 0
         let bar = s:api.ChartController.BarIterPrev(a:bar_iter)
@@ -173,11 +181,11 @@ function s:UpdateChartView(ticker, bar_iter, last_bar)
         let open = s:api.ChartController.GetBarVal(bar, "OPEN")
         let close = s:api.ChartController.GetBarVal(bar, "CLOSE")
         let minute = s:api.ChartController.GetBarVal(bar, "MINUTE")
-        if newBar
+        if newBar || newChart
             let hl = close >= open
 	        :call s:UpdateColHL(bar_col, hl)
     	endif 
-        if newBounds
+        if newBounds || newChart
             :call s:UpdateLinesForBar(low, high, open, close, 0)
         endif
         let bar_col -= 1
@@ -240,17 +248,16 @@ function s:ShiftLines()
 endfunction
 
 function s:BarChar(line, low, high, open, close)
-    if g:IndexOf([a:low, a:high, a:open, a:close], 1.0) != -1
+    if g:IndexOf([a:low, a:high, a:open, a:close], -1.0) != -1
         return " " 
     endif
     let low_line = s:PriceToLine(a:low)
     let min_box = s:PriceToLine(g:FloatMin([a:open, a:close]))
     let max_box = s:PriceToLine(g:FloatMax([a:open, a:close]))
     let high_line = s:PriceToLine(a:high)
-    "let change = 1
-    "if g:FloatMax([a:open, a:close]) == a:open
-    "    let change = -1
-    "endif
+    if min_box == max_box && a:line == min_box
+        return "+"
+    endif
 
     if a:line < low_line
         return " "
@@ -266,7 +273,7 @@ function s:BarChar(line, low, high, open, close)
 endfunction
 
 function s:PriceToLine(price)
-    return (a:price - s:minPrice) / (s:line_interval + 0.0) + 1.0
+    return float2nr((a:price - s:minPrice) / (s:line_interval + 0.0)) + 1
 endfunction
 
 function s:LineToLoPrice(line)
@@ -349,9 +356,10 @@ function s:HideChart()
     :call popup_hide(s:t1_handle)
 endfunction
 
-function s:ChangeChart(ticker)
+function s:ChangeChart(ticker, bar_iter)
     call s:ClearChartView()
     let s:ticker = a:ticker
+    :call s:SetNewBounds(a:bar_iter)
     :call popup_setoptions(s:win_handle, {'title': s:ticker})
 endfunction
 
@@ -374,7 +382,16 @@ function s:DestroyChartView()
 endfunction
             
 
-
+function s:SetNewBounds(bar_iter)
+    let s:maxPrice = -1.0
+    let s:minPrice = pow(2, 32) + 0.0
+    while s:api.ChartController.BarIterIsValid(a:bar_iter)
+        let bar = s:api.ChartController.BarIterPrev(a:bar_iter)
+        let s:maxPrice = g:FloatMax([s:maxPrice, s:api.ChartController.GetBarVal(bar, "HIGH")])
+        let s:minPrice = g:FloatMin([s:minPrice, s:api.ChartController.GetBarVal(bar, "LOW")]) 
+    endwhile
+    :call s:api.ChartController.BarIterReset(a:bar_iter)
+endfunction
 
 
 
