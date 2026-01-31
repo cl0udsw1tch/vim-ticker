@@ -2,7 +2,7 @@
 " MODEL in MVC architecture. 
 
 let s:job_handle = v:null
-let s:n_bars = 3
+let s:n_bars = 10
 
 let s:model_name = "__ticker_model__"
 let s:model_handle = -1
@@ -444,4 +444,4 @@ function! s:RunStreamTests()
     echom "===== Tests finished ====="
 endfunction
 
-:call s:RunStreamTests()
+" :call s:RunStreamTests()
