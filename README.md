@@ -1,8 +1,8 @@
 # vim-ticker
 
-**Real-time stock/crypto ticker views directly inside Vim**
+**Real-time stock ticker views directly inside Vim**
 
-A lightweight Vim plugin that lets you display live/updating ticker prices for stocks, indices, crypto, etc., right in your editor — without ever leaving Vim.
+A lightweight Vim plugin that lets you display live/updating ticker prices for stocks right in your editor — without ever leaving Vim.
 
 Inspired by classic ticker tapes and status monitors, but built for modern terminal workflows.
 
@@ -19,20 +19,20 @@ Inspired by classic ticker tapes and status monitors, but built for modern termi
 
 | Command                  | Description                              | Notes                              |
 |--------------------------|------------------------------------------|------------------------------------|
-| `:Ticker [args...]`      | Start monitoring one or more tickers     | Main entry point                   |
-| `:NoTicker`              | Stop monitoring & remove all tickers     | Main exit point                    |
-| `:TickerTape`            | Show scrolling ticker tape view          | Marquee-style price display        |
+| `:Ticker [args...]`      | Start monitoring one or more tickers     | Only entry point                   |
+| `:NoTicker`              | Stop monitoring & remove all tickers     | Only exit point                    |
+| `:TickerTape`            | Show scrolling ticker tape view          |                                    |
 | `:NoTickerTape`          | Hide the ticker tape                     |                                    |
-| `:TickerChart`           | Show price chart view                    | Simple ASCII or line chart         |
-| `:NoTickerChart`         | Hide the chart                           | (alias: `:HideChart`)              |
-| `:NextTickerChart`       | Cycle to next chart/symbol               | If multiple symbols                |
-| `:PrevTickerChart`       | Cycle to previous chart/symbol           | If multiple symbols                |
+| `:TickerChart`           | Show price chart view                    |                                    |
+| `:NoTickerChart`         | Hide the chart                           |                                    |
+| `:NextTickerChart`       | Cycle to next chart/symbol               |                                    |
+| `:PrevTickerChart`       | Cycle to previous chart/symbol           |                                    |
 
 **Example usage:**
 
 ```vim
-" Watch AAPL, TSLA and BTC-USD
-:Ticker AAPL TSLA BTC-USD
+" Watch AAPL, TSLA
+:Ticker AAPL TSLA
 
 " Show the scrolling tape
 :TickerTape
