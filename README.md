@@ -5,6 +5,8 @@
 A lightweight Vim plugin that lets you display live/updating ticker prices for stocks right in your editor — without ever leaving Vim.
 
 Inspired by classic ticker tapes and status monitors, but built for modern terminal workflows.
+![Live scrolling ticker tape showing stock prices in Vim](images/img1.png?raw=true "TickerTape view with TSLA, NVDA, AAPL (termguicolors)")
+![Live scrolling ticker tape showing stock prices in Vim](images/img2.png?raw=true "TickerTape view with TSLA, NVDA, AAPL (notermguicolors)")
 
 ## Features
 
