@@ -52,12 +52,10 @@ function s:CreateModel()
     let s:model_handle = bufnr(s:model_name)
     let s:model = getbufvar(s:model_handle, "model")
     let s:model_interface = getbufvar(s:model_handle, "model_interface")
-    "echo "Model " . s:model_handle
 endfunction
 
 function s:StartModel(tickers)
     :call s:model_interface["StartModel"](a:tickers)
-    "echo "Model started"
 endfunction
 
 function s:DestroyModel()
@@ -74,7 +72,6 @@ endfunction
 " --------------------- CONTROLLER LIFECYCLE ---------------------
 
 function s:CreateInterface()
-    "echo "Creating controller interface"
     let s:interface_handle = bufadd(s:interface_name)
     :call setbufvar(s:interface_handle, "&buflisted", 0)
     :call setbufvar(s:interface_handle, "&buftype", "nofile")
@@ -133,10 +130,8 @@ function s:PrevChart()
 endfunction
 
 function s:CreateTicker(...)
-    "echo "Tickers "
-    "echo  a:000
     if a:0 > s:max_tickers
-        "echo "Too many tickers, maximum " . string(s:max_tickers) . " allowed"
+        echo "Too many tickers, maximum " . string(s:max_tickers) . " allowed"
         return
     endif 
     :call s:CreateModel()

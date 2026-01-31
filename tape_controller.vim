@@ -37,7 +37,6 @@ augroup END
 "--------------------------- INTERFACE --------------------------------
 
 function s:CreateTapeController()
-    echo "Creating Tape Controller .... " 
     let s:interface_handle = bufnr(s:interface_name)
     let s:api = getbufvar(s:interface_handle, "api")
     let s:api.TapeController = {
