@@ -176,8 +176,8 @@ command TickerTape :call s:CreateTape()
 command NoTickerTape :call s:DestroyTape()
 command TickerChart :call s:CreateChart()
 command NoTickerChart :call s:HideChart()
-command NextTickerChart :call s:NextChart()
-command PrevTickerChart :call s:PrevChart()
+command TickerNextChart :call s:NextChart()
+command TickerPrevChart :call s:PrevChart()
 
 
 

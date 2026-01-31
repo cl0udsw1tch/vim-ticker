@@ -27,8 +27,8 @@ Inspired by classic ticker tapes and status monitors, but built for modern termi
 | `:NoTickerTape`          | Hide the ticker tape                     |                                    |
 | `:TickerChart`           | Show price chart view                    |                                    |
 | `:NoTickerChart`         | Hide the chart                           |                                    |
-| `:NextTickerChart`       | Cycle to next chart/symbol               |                                    |
-| `:PrevTickerChart`       | Cycle to previous chart/symbol           |                                    |
+| `:TickerNextChart`       | Cycle to next chart/symbol               |                                    |
+| `:TickerPrevChart`       | Cycle to previous chart/symbol           |                                    |
 
 **Example usage:**
 
