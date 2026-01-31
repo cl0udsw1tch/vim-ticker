@@ -47,6 +47,7 @@ Inspired by classic ticker tapes and status monitors, but built for modern termi
 
 " Stop everything
 :NoTicker
+```
 
 !**NOTE**!
 Must launch vim from a shell with an active Python environment that has *yfinance* installed. 
