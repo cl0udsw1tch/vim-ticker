@@ -1,8 +1,8 @@
 " CHART VIEW
 highlight! HL_GREEN_BAR cterm=bold ctermbg=Black ctermfg=Green guibg=#000000 guifg=#00FF00
 highlight! HL_RED_BAR cterm=bold ctermbg=Black ctermfg=Red guibg=#000000 guifg=#FF0000
-highlight! HL_CHART cterm=NONE ctermbg=NONE ctermfg=NONE guibg=NONE guifg=NONE
-highlight! HL_BORDER cterm=NONE ctermbg=NONE ctermfg=NONE guibg=NONE guifg=NONE
+highlight! HL_CHART cterm=NONE ctermbg=Black ctermfg=NONE guibg=#000000 guifg=NONE
+highlight! HL_BORDER cterm=NONE ctermbg=Black ctermfg=NONE guibg=#000000 guifg=NONE
 let s:HL_MAP = ["HL_RED_BAR", "HL_GREEN_BAR"]
 let s:HL_ON = 1
 
@@ -11,28 +11,31 @@ let s:win_handle = -1
 let s:ticker = " "
 let s:lines = 25
 let s:line_grps = float2nr(ceil(s:lines / 8.0))
-let s:cols = 10
+let s:cols = 3
 let s:content = repeat([" "], s:lines+1) " low->high prices, iterative backwards on render
 let s:maxPrice = -1
 let s:minPrice = pow(2, 32)
 let s:minute = -1
 let s:line_interval = -1
-let s:col_match_state = repeat([-1], s:cols+1) " SENTINEL @ idx=0
 
+let s:match_state = repeat([-1], s:cols+1) " SENTINEL @ idx=0
 let s:match_pos = repeat([v:null], s:cols+1)
+let s:match_ids = repeat([v:null], s:cols+1)
 let col = 1
 while col < s:cols + 1
-	let col_matches = repeat([v:null], s:line_grps)
+	let grouped_pos = repeat([v:null], s:line_grps)
+    let grouped_matches = repeat([-1], s:line_grps)
 	let grp = 0
 	while grp < s:line_grps
 		let grp_size = 8
 		if 8*(grp+1) > s:lines
 			let grp_size = s:lines - 8*grp
 		endif
-		let col_matches[grp] = map(repeat([v:null], grp_size), "[grp*8 + v:key+1, col]")
+		let grouped_pos[grp] = map(repeat([v:null], grp_size), "[grp*8 + v:key+1, col]")
 		let grp+=1
 	endwhile
-	let s:match_pos[col] = col_matches
+	let s:match_pos[col] = grouped_pos
+    let s:match_ids[col] = grouped_matches
 	let col += 1
 endwhile
 let s:interface_name = "__ticker_controller__"
@@ -95,8 +98,6 @@ function s:UpdateChartView(ticker, bar_iter, last_bar)
    
     let hl = last_close >= last_open 
     :call s:UpdateColHL(s:cols, hl)
-
-
     
     let newBounds = last_high > s:maxPrice || last_low < s:minPrice
     let newBar = last_minute > s:minute
@@ -105,9 +106,6 @@ function s:UpdateChartView(ticker, bar_iter, last_bar)
         let s:maxPrice = g:FloatMax([s:maxPrice, last_high])
         let s:minPrice = g:FloatMin([s:minPrice, last_low])
         let s:line_interval = (s:maxPrice-s:minPrice)/(s:lines+0.0)
-    endif
-    if newBar
-        "echo a:bar_iter
     endif
 
     if !newBounds && !newBar
@@ -129,7 +127,7 @@ function s:UpdateChartView(ticker, bar_iter, last_bar)
     endif
    
     let bar_col = s:cols - 1
-    while s:api.ChartController.BarIterIsValid(a:bar_iter)
+    while s:api.ChartController.BarIterIsValid(a:bar_iter) && bar_col > 0
         let bar = s:api.ChartController.BarIterPrev(a:bar_iter)
         let low = s:api.ChartController.GetBarVal(bar, "LOW")
         let high = s:api.ChartController.GetBarVal(bar, "HIGH")
@@ -138,8 +136,8 @@ function s:UpdateChartView(ticker, bar_iter, last_bar)
         let minute = s:api.ChartController.GetBarVal(bar, "MINUTE")
         if newBar
             let hl = close >= open
-	    :call s:UpdateColHL(bar_col, hl)
-	endif 
+	        :call s:UpdateColHL(bar_col, hl)
+    	endif 
         if newBounds
             :call s:UpdateLinesForBar(low, high, open, close, 0)
         endif
@@ -155,33 +153,32 @@ function s:UpdateColHL(col, hl)
 		return
 	endif
 
-	if s:col_match_state[a:col] == -1
+	if s:match_state[a:col] == -1
 		:call s:AddColHLGrps(a:col, a:hl)
-		let s:col_match_state[a:col] = a:hl
-    	elseif s:col_match_state[a:col] == a:hl
+		let s:match_state[a:col] = a:hl
+    elseif s:match_state[a:col] == a:hl
 		" NO OP
-    	else
+    else
 		:call s:DeleteColHLGrps(a:col)
 		:call s:AddColHLGrps(a:col, a:hl)
-   		let s:col_match_state[a:col] = a:hl
-    	endif
+   		let s:match_state[a:col] = a:hl
+    endif
 endfunction
 
 
 function s:AddColHLGrps(col, hl)
 	let grp = 0
 	while grp < s:line_grps
-		let hl_grp_id = 8 * (a:col - 1) + grp
-		:call matchaddpos(s:HL_MAP[a:hl], s:match_pos[a:col][grp], 10, hl_grp_id, {"window": s:win_handle})
-		let grp +=1
+		let s:match_ids[a:col][grp] = matchaddpos(s:HL_MAP[a:hl], s:match_pos[a:col][grp], 10, -1, {"window": s:win_handle})
+	    let grp +=1
 	endwhile
 endfunction
 
 function s:DeleteColHLGrps(col)
 	let grp = 0
 	while grp < s:line_grps
-		let hl_grp_id = 8 * (a:col - 1) + grp
-		:call matchdelete(hl_grp_id, s:win_handle)
+		:call matchdelete(s:match_ids[a:col][grp], s:win_handle)
+		let s:match_ids[a:col][grp] = -1
 		let grp +=1
 	endwhile
 endfunction
@@ -272,7 +269,7 @@ function s:ClearChartView()
 endfunction
 
 function s:ClearChartContent()
-    let s:content = repeat([""], s:lines+1)
+    let s:content = repeat([" "], s:lines+1)
 endfunction
 
 function s:ClearChartHLMatches()
@@ -280,13 +277,14 @@ function s:ClearChartHLMatches()
 		return
 	endif
 
-    	let col = 1
-    	while col < s:cols + 1
-		let hl = s:col_match_state[col]
+    let col = 1
+    while col < s:cols + 1
+		let hl = s:match_state[col]
 		if hl == -1
 			" NO OP
 		else
 			:call s:DeleteColHLGrps(col) 
+            let s:match_state[col] = -1
 		endif 
 		let col += 1
 	endwhile

@@ -2,7 +2,7 @@
 " MODEL in MVC architecture. 
 
 let s:job_handle = v:null
-let s:n_bars = 20
+let s:n_bars = 3
 
 let s:model_name = "__ticker_model__"
 let s:model_handle = -1
@@ -160,9 +160,6 @@ function s:NextIdx(stream)
 endfunction
 
 function s:StreamPrevIdx(stream, idx)
-    if a:idx == a:stream.head
-        return -1
-    endif
     return (a:idx -1 + a:stream.capacity ) % a:stream.capacity
 endfunction
 
@@ -198,12 +195,17 @@ function s:StreamIterIsValid(stream_iter)
 endfunction
 
 function s:StreamIterPrev(stream_iter)
-    "echo "stream_iter"
-    "echo a:stream_iter
-    let res = a:stream_iter.stream.buf[a:stream_iter.idx]
-    "echo "res"
-    "echo res
+    
+    if a:stream_iter.idx == a:stream_iter.stream.idx
+        let a:stream_iter.idx = -1
+        return a:stream_iter.stream.buf[a:stream_iter.stream.idx]
+    endif
+    let stream = a:stream_iter.stream
+    let res = stream.buf[a:stream_iter.idx]
     let a:stream_iter.idx = s:StreamPrevIdx(a:stream_iter.stream, a:stream_iter.idx)
+    if stream.buf[a:stream_iter.idx] is v:null
+        let a:stream_iter.idx = -1
+    endif
     return res
 endfunction
 
@@ -335,4 +337,111 @@ endfunction
 
 
 
+" ====================== Test Suite ======================
 
+function! s:AssertEqual(actual, expected, msg)
+    if a:actual == a:expected
+        echom "OK: " .. a:msg
+    else
+        echom "FAIL: " .. a:msg
+        echom "  Expected: " .. string(a:expected)
+        echom "  Got:      " .. string(a:actual)
+    endif
+endfunction
+
+function! s:AssertNotNull(val, msg)
+    if a:val isnot# v:null
+        echom "OK: " .. a:msg
+    else
+        echom "FAIL: " .. a:msg .. " (got null)"
+    endif
+endfunction
+
+function! s:RunStreamTests()
+    echom "===== Starting stream + iterator tests ====="
+
+    let s:n_bars = 5   " small size → easy to test wrap-around
+    let stream = s:Stream()
+
+    " 1. Empty stream
+    call s:AssertEqual(stream.size, 0, "empty → size=0")
+    call s:AssertEqual(s:LastIdx(stream), -1, "empty → LastIdx=-1")
+    call s:AssertEqual(s:Tail(stream), v:null, "empty → Tail=null")
+
+    let iter = s:StreamIterator(stream)
+    call s:AssertEqual(s:StreamIterIsValid(iter), 0, "empty → iterator invalid")
+
+    " 2. Add 1 item
+    let item1 = s:StreamItem() | let item1[0] = 101 | let item1[1] = 100.5
+    call s:Add(stream, item1)
+
+    call s:AssertEqual(stream.size, 1, "size=1 after first add")
+    call s:AssertEqual(s:Tail(stream)[0], 101, "Tail is newest (101)")
+    call s:AssertEqual(s:GetStreamItemVal(s:Tail(stream), "MINUTE"), 101, "Tail MINUTE=101")
+
+    " 3. Add 2 more → size=3 (not full yet)
+    let item2 = s:StreamItem() | let item2[0] = 102 | let item2[2] = 101.2
+    let item3 = s:StreamItem() | let item3[0] = 103 | let item3[3] = 102.8
+    call s:Add(stream, item2)
+    call s:Add(stream, item3)
+
+    call s:AssertEqual(stream.size, 3, "size=3")
+    call s:AssertEqual(s:Tail(stream)[0], 103, "newest is 103")
+
+    " 4. Backward iteration (newest → oldest)
+    let iter = s:StreamIterator(stream)
+    call s:AssertNotNull(iter.idx, "iterator starts valid")
+
+    let seen = []
+    while s:StreamIterIsValid(iter)
+        let item = s:StreamIterPrev(iter)
+        call add(seen, item[0])
+    endwhile
+
+    call s:AssertEqual(seen, [103,102,101], "backward order: 103→102→101")
+
+    " 5. Fill to capacity (5 items)
+    let item4 = s:StreamItem() | let item4[0] = 104
+    let item5 = s:StreamItem() | let item5[0] = 105
+    call s:Add(stream, item4)
+    call s:Add(stream, item5)
+
+    call s:AssertEqual(stream.size, 5, "size=5 (full)")
+    call s:AssertEqual(s:Tail(stream)[0], 105, "newest=105")
+
+    " 6. Add one more → overwrite oldest, size stays 5
+    let item6 = s:StreamItem() | let item6[0] = 106
+    call s:Add(stream, item6)
+
+    call s:AssertEqual(stream.size, 5, "size stays 5 after overwrite")
+    call s:AssertEqual(s:Tail(stream)[0], 106, "newest=106")
+
+    " 7. Backward iteration after wrap-around
+    let iter = s:StreamIterator(stream)
+    let seen = []
+    while s:StreamIterIsValid(iter)
+        let item = s:StreamIterPrev(iter)
+        call add(seen, item[0])
+        if len(seen) == 5
+            :call s:AssertEqual(iter.idx, -1, "Iterator in invalid state after 5 iterations")
+        endif
+    endwhile
+
+    call s:AssertEqual(seen, [106,105,104,103,102], "backward after overwrite: 106→105→104→103→102")
+
+    " 8. One more overwrite → check head movement
+    let item7 = s:StreamItem() | let item7[0] = 107
+    call s:Add(stream, item7)
+
+    let iter = s:StreamIterator(stream)
+    let seen = []
+    while s:StreamIterIsValid(iter)
+        call add(seen, s:StreamIterPrev(iter)[0])
+    endwhile
+
+    call s:AssertEqual(seen, [107,106,105,104,103], "final: 107→106→105→104→103")
+
+    echom "===== Tests finished ====="
+endfunction
+
+:call s:RunStreamTests()
