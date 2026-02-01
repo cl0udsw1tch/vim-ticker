@@ -123,10 +123,11 @@ endfunction
 function s:UpdateChartView(ticker, bar_iter, last_bar)
     "bar_iter is a backwards iterator, with a PREV api method
     let newChart =  a:ticker != s:ticker
-
     if newChart
         :call s:ChangeChart(a:ticker, a:bar_iter)
+        let s:ticker = a:ticker
     endif
+
     let last_low = s:api.ChartController.GetBarVal(a:last_bar, "LOW")
     let last_high = s:api.ChartController.GetBarVal(a:last_bar, "HIGH")
     let last_minute = s:api.ChartController.GetBarVal(a:last_bar, "MINUTE")
@@ -359,7 +360,7 @@ endfunction
 function s:ChangeChart(ticker, bar_iter)
     call s:ClearChartView()
     :call s:SetNewBounds(a:bar_iter)
-    :call popup_setoptions(s:win_handle, {'title': s:ticker})
+    :call popup_setoptions(s:win_handle, {'title': a:ticker})
 endfunction
 
 function s:DestroyChartView()
