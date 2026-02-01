@@ -358,7 +358,6 @@ endfunction
 
 function s:ChangeChart(ticker, bar_iter)
     call s:ClearChartView()
-    let s:ticker = a:ticker
     :call s:SetNewBounds(a:bar_iter)
     :call popup_setoptions(s:win_handle, {'title': s:ticker})
 endfunction
