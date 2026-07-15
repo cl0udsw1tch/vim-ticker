@@ -14,7 +14,7 @@ let s:change_sym_map =  {-1: "\u25BC ", 0: "\u25B2 " , 1: "\u25B2 "}
 let s:percent_char = "\uFE6A"
 let s:ticker_head_offset = 0
 let s:ticker_head = 0
-let s:tape_len = 25
+let s:tape_len = 50
 let s:rotate_hz = 5
 let s:rotate_handle = -1
 
